@@ -1,0 +1,106 @@
+.members-sidebar {
+  width: 240px;
+  background-color: var(--bg-secondary);
+  border-left: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 8px;
+  overflow-y: auto;
+  border-radius: 0; /* Override glass-panel default if needed */
+  border-top: none;
+  border-bottom: none;
+  border-right: none;
+}
+
+.member-group {
+  margin-bottom: 24px;
+}
+
+.group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 0 8px;
+  margin-bottom: 8px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  gap: 12px;
+}
+
+.member-item:hover {
+  background-color: var(--bg-modifier-hover);
+}
+
+.member-item.offline {
+  opacity: 0.5;
+}
+
+.member-item.offline:hover {
+  opacity: 1;
+}
+
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+}
+
+/* Simulate Discord status colors */
+.status-indicator.online { background-color: var(--accent-success); }
+.status-indicator.idle { background-color: #F1C40F; } /* Yellow */
+.status-indicator.dnd { background-color: var(--accent-danger); } /* Red */
+.status-indicator.offline { 
+  background-color: var(--bg-primary); 
+  border: 2px solid var(--text-muted); 
+  width: 10px; 
+  height: 10px; 
+  right: -1px; 
+  bottom: -1px; 
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.member-name {
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.member-role {
+  color: var(--text-muted);
+  font-size: 11px;
+}

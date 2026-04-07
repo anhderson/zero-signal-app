@@ -1,0 +1,117 @@
+.video-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background-color: var(--bg-tertiary); /* Darker background for voice/video */
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.video-grid {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.video-tile {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 16 / 9;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+}
+
+.video-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+}
+
+.video-overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background-color: rgba(0,0,0,0.6);
+  padding: 4px 12px;
+  border-radius: 16px;
+}
+
+.user-name {
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.mic-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: rgba(0,0,0,0.6);
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.mic-status.active {
+  color: var(--accent-success);
+  border: 2px solid var(--accent-success);
+}
+
+.video-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;
+  padding: 12px 24px;
+  border-radius: 32px;
+}
+
+.control-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background-color: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.control-btn:hover {
+  background-color: var(--bg-primary);
+  color: white;
+}
+
+.control-btn.decline {
+  background-color: var(--accent-danger);
+  color: white;
+}
+
+.control-btn.decline:hover {
+  filter: brightness(1.2);
+}

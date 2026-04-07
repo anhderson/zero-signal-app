@@ -1,0 +1,18 @@
+.app-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-tertiary);
+}
+
+/* Base styles for layout containers */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  border-top-left-radius: 8px; /* Slightly distinct look from discord */
+  overflow: hidden;
+  position: relative;
+}

@@ -1,0 +1,75 @@
+.project-sidebar {
+  width: 72px;
+  background-color: var(--bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.project-item {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px; /* Circles by default */
+  background-color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-normal);
+  transition: all 0.2s ease-out;
+  cursor: pointer;
+  position: relative;
+}
+
+.project-item:hover,
+.project-item.active {
+  border-radius: 16px; /* Squircle effect on hover */
+  background-color: var(--accent-primary);
+  color: #fff;
+}
+
+.project-item.action {
+  background-color: var(--bg-primary);
+  color: var(--text-success);
+}
+
+.project-item.action:hover {
+  background-color: var(--accent-success);
+  color: #fff;
+}
+
+/* Selected indicator */
+.project-item.active::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  width: 8px;
+  height: 40px;
+  border-radius: 0 4px 4px 0;
+  background-color: var(--text-normal);
+}
+
+.project-item:hover:not(.active)::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  width: 8px;
+  height: 20px;
+  border-radius: 0 4px 4px 0;
+  background-color: var(--text-normal);
+  transform: scaleY(1);
+}
+
+.project-icon {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.project-separator {
+  width: 32px;
+  height: 2px;
+  background-color: var(--bg-modifier-active);
+  border-radius: 1px;
+}
