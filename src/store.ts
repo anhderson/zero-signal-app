@@ -224,7 +224,43 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       set({ messages });
     }
+
+    // Subscribe to new messages
+    supabase
+      .channel(`chat:${channelId}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages',
+        filter: `channel_id=eq.${channelId}`
+      }, async (payload) => {
+        // Fetch profile for the new message
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('username, avatar_str')
+          .eq('id', payload.new.user_id)
+          .single();
+
+        const newMsg: Message = {
+          id: payload.new.id,
+          channelId: payload.new.channel_id,
+          text: payload.new.text,
+          userId: payload.new.user_id,
+          username: userData?.username || 'Anon',
+          avatarStr: userData?.avatar_str || '??',
+          timestamp: new Date(payload.new.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        };
+
+        set(state => ({
+          // Only add if not already there (to avoid duplicates from local optimist addMessage)
+          messages: state.messages.some(m => m.id === newMsg.id) 
+            ? state.messages 
+            : [...state.messages, newMsg]
+        }));
+      })
+      .subscribe();
   },
+
 
   addMessage: async (msg) => {
     const { data, error } = await supabase
