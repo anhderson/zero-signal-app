@@ -5,6 +5,7 @@ export interface User {
   id: string;
   name: string;
   avatarStr: string;
+  email?: string;
 }
 
 export interface Project {
@@ -40,10 +41,13 @@ export interface StorageFile {
 }
 
 interface AppState {
-  // User
+  // Auth
   currentUser: User | null;
-  login: (name: string) => Promise<void>;
-  logout: () => void;
+  initialized: boolean;
+  checkAuth: () => Promise<void>;
+  login: (email: string, pass: string) => Promise<{ error: any }>;
+  signUp: (email: string, pass: string, username: string) => Promise<{ error: any }>;
+  logout: () => Promise<void>;
 
   // Projects
   projects: Project[];
@@ -71,32 +75,82 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
-  // ==================== USER ====================
+  // ==================== AUTH ====================
   currentUser: null,
+  initialized: false,
 
-  login: async (name: string) => {
-    const avatarStr = name.substring(0, 2).toUpperCase();
-    // Insert profile into Supabase
-    const { data, error } = await supabase
-      .from('profiles')
-      .insert({ username: name, avatar_str: avatarStr })
-      .select()
-      .single();
+  checkAuth: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
 
-    if (error) {
-      console.error('Login error:', error);
-      // Fallback to local-only
-      set({ currentUser: { id: Date.now().toString(), name, avatarStr } });
-      return;
+      set({ 
+        currentUser: { 
+          id: session.user.id, 
+          name: profile?.username || session.user.email?.split('@')[0] || 'User', 
+          avatarStr: profile?.avatar_str || 'US',
+          email: session.user.email
+        },
+        initialized: true 
+      });
+      await get().loadProjects();
+    } else {
+      set({ currentUser: null, initialized: true });
     }
-
-    set({ currentUser: { id: data.id, name: data.username, avatarStr: data.avatar_str } });
-
-    // Load initial data
-    await get().loadProjects();
   },
 
-  logout: () => set({ currentUser: null, projects: [], channels: [], messages: [], storageFiles: [] }),
+  login: async (email, pass) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) return { error };
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    set({ 
+      currentUser: { 
+        id: data.user.id, 
+        name: profile?.username || data.user.email?.split('@')[0] || 'User', 
+        avatarStr: profile?.avatar_str || 'US',
+        email: data.user.email
+      } 
+    });
+    await get().loadProjects();
+    return { error: null };
+  },
+
+  signUp: async (email, pass, username) => {
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password: pass,
+      options: { data: { username } } 
+    });
+    
+    if (error) return { error };
+
+    // Wait a bit for the trigger to finish or just set locally
+    set({ 
+      currentUser: { 
+        id: data.user?.id || '', 
+        name: username, 
+        avatarStr: username.substring(0, 2).toUpperCase(),
+        email: data.user?.email || email
+      } 
+    });
+    await get().loadProjects();
+    return { error: null };
+  },
+
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ currentUser: null, projects: [], channels: [], messages: [], storageFiles: [] });
+  },
 
   // ==================== PROJECTS ====================
   projects: [],
@@ -109,7 +163,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         projects: data.map(p => ({ id: p.id, name: p.name, iconStr: p.icon_str })),
         activeProjectId: data.length > 0 ? data[0].id : null
       });
-      // Load channels for first project
       if (data.length > 0) {
         await get().loadChannels(data[0].id);
       }
@@ -117,23 +170,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createProject: async (name: string) => {
-    const user = get().currentUser;
     const iconStr = name.substring(0, 2).toUpperCase();
     const { data, error } = await supabase
       .from('projects')
-      .insert({ name, icon_str: iconStr, owner_id: user?.id })
+      .insert({ name, icon_str: iconStr, owner_id: get().currentUser?.id })
       .select()
       .single();
 
     if (error) { console.error(error); return; }
 
-    // Create default channels
     const projectId = data.id;
     await supabase.from('channels').insert([
       { project_id: projectId, name: 'geral', type: 'text' },
       { project_id: projectId, name: 'Lounge', type: 'voice' },
-      { project_id: projectId, name: 'Arquivos', type: 'storage' },
-      { project_id: projectId, name: 'Avisos', type: 'events' }
+      { project_id: projectId, name: 'Arquivos', type: 'storage' }
     ]);
 
     set(state => ({
@@ -170,11 +220,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       const firstText = channels.find(c => c.type === 'text');
       set({ channels, activeChannelId: firstText?.id || channels[0]?.id || null });
 
-      // Load messages for first channel
       if (firstText) {
         await get().loadMessages(firstText.id);
       }
-      // Load storage files
       await get().loadStorageFiles(projectId);
     }
   },
@@ -225,7 +273,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ messages });
     }
 
-    // Subscribe to new messages
     supabase
       .channel(`chat:${channelId}`)
       .on('postgres_changes', { 
@@ -234,7 +281,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         table: 'messages',
         filter: `channel_id=eq.${channelId}`
       }, async (payload) => {
-        // Fetch profile for the new message
         const { data: userData } = await supabase
           .from('profiles')
           .select('username, avatar_str')
@@ -252,7 +298,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         };
 
         set(state => ({
-          // Only add if not already there (to avoid duplicates from local optimist addMessage)
           messages: state.messages.some(m => m.id === newMsg.id) 
             ? state.messages 
             : [...state.messages, newMsg]
@@ -260,7 +305,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .subscribe();
   },
-
 
   addMessage: async (msg) => {
     const { data, error } = await supabase
@@ -306,12 +350,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addStorageFile: async (file) => {
-    const user = get().currentUser;
     const { data, error } = await supabase
       .from('storage_files')
       .insert({
         project_id: file.projectId, name: file.name,
-        type: file.type, size: file.size, uploaded_by: user?.id
+        type: file.type, size: file.size, uploaded_by: get().currentUser?.id
       })
       .select()
       .single();
