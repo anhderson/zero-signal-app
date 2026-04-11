@@ -1,7 +1,7 @@
 {
   "name": "zerosignal",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero Signal - Communication and Project Management Platform",
   "author": "Anhderson",
   "main": "electron/main.js",
@@ -10,13 +10,17 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "start": "npm run electron:dev",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron . --dev\"",
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.102.1",
+    "chess.js": "^1.4.0",
+    "electron-updater": "^6.8.3",
     "lucide-react": "^1.7.0",
     "react": "^19.2.4",
+    "react-chessboard": "^5.10.0",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0",
     "zustand": "^5.0.12"
@@ -40,19 +44,29 @@
     "vite": "^8.0.4",
     "wait-on": "^9.0.4"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anhderson/zero-signal-app.git"
+  },
   "build": {
     "appId": "com.zerosignal.app",
     "productName": "Zero Signal",
     "directories": {
       "output": "dist_electron"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "anhderson",
+        "repo": "zero-signal-app"
+      }
+    ],
     "files": [
       "dist/**/*",
       "electron/**/*"
     ],
     "win": {
-      "target": "portable",
-      "icon": "public/favicon.svg"
+      "target": "nsis"
     }
   }
 }

@@ -6,13 +6,133 @@
   background-color: var(--bg-tertiary);
 }
 
-/* Base styles for layout containers */
+/* main-content: sits inside project-layout flex row, fills all remaining width */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-primary);
-  border-top-left-radius: 8px; /* Slightly distinct look from discord */
   overflow: hidden;
   position: relative;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Every view (Chat, Voice, Storage…) must fill main-content completely */
+.view-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* GUST LOCKDOWN SYSTEM */
+.gust-lockdown-red-alert {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+  background: #0a0000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+}
+
+.gust-lockdown-red-alert::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 0, 0, 0.03) 0px,
+    rgba(255, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+}
+
+.gust-alert-inner {
+  width: 600px;
+  background: rgba(20, 0, 0, 0.95);
+  border: 4px solid #ff1111;
+  box-shadow: 0 0 50px rgba(255, 17, 17, 0.3), inset 0 0 20px rgba(255, 17, 17, 0.2);
+  padding: 0;
+  position: relative;
+  animation: gust-shake 0.4s infinite linear;
+}
+
+@keyframes gust-shake {
+  0% { transform: translate(0,0); }
+  25% { transform: translate(2px, 1px); }
+  50% { transform: translate(-1px, -2px); }
+  75% { transform: translate(-2px, 1px); }
+  100% { transform: translate(0,0); }
+}
+
+.gust-header {
+  background: #ff1111;
+  color: #000;
+  padding: 8px 16px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  font-size: 14px;
+}
+
+.gust-content {
+  padding: 40px;
+  text-align: center;
+  color: #fff;
+}
+
+.gust-content h1 {
+  font-size: 42px;
+  margin: 0 0 20px 0;
+  color: #ff1111;
+  text-shadow: 0 0 20px rgba(255, 17, 17, 0.5);
+}
+
+.gust-content p {
+  font-size: 18px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+.gust-reason {
+  background: rgba(255, 17, 17, 0.1);
+  border: 1px dashed #ff1111;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 14px;
+  color: #ff5555;
+  margin-bottom: 40px;
+}
+
+.gust-reset-btn {
+  background: transparent;
+  border: 2px solid #ff1111;
+  color: #ff1111;
+  padding: 12px 30px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 1px;
+}
+
+.gust-reset-btn:hover {
+  background: #ff1111;
+  color: #000;
+  box-shadow: 0 0 20px #ff1111;
 }

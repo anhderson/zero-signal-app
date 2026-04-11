@@ -1,75 +1,171 @@
 .project-sidebar {
-  width: 72px;
+  width: 84px;
+  height: 100%;
   background-color: var(--bg-tertiary);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 0;
-  gap: 8px;
-  flex-shrink: 0;
+  justify-content: flex-end; /* Move to bottom */
+  padding: 16px 0;
+  gap: 12px;
+  border-right: 1px solid rgba(var(--accent-rgb), 0.1);
+  z-index: 10;
 }
 
 .project-item {
-  width: 48px;
-  height: 48px;
-  border-radius: 24px; /* Circles by default */
-  background-color: var(--bg-primary);
+  width: 52px;
+  height: 52px;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-normal);
-  transition: all 0.2s ease-out;
   cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid transparent;
+  overflow: hidden;
   position: relative;
 }
 
-.project-item:hover,
-.project-item.active {
-  border-radius: 16px; /* Squircle effect on hover */
-  background-color: var(--accent-primary);
+.project-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.project-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+  z-index: 1;
+}
+
+.project-initials {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-tech);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--neon-cyan);
+  background: #000;
+  text-shadow: 0 0 10px var(--neon-cyan);
+  transition: all 0.3s;
+  z-index: 2;
+}
+
+/* Hover effects: Cyberpunk Glitch & Expansion */
+.project-item:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 
+    0 0 25px rgba(var(--accent-rgb, var(--accent-rgb)), 0.4),
+    inset 0 0 10px rgba(var(--accent-rgb, var(--accent-rgb)), 0.2);
+  transform: scale(1.1);
+  border-radius: 4px; /* Sharper edges on hover */
+  animation: project-glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.project-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(0deg, transparent 0%, rgba(var(--accent-rgb, var(--accent-rgb)), 0.1) 50%, transparent 100%);
+  background-size: 100% 4px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.project-item:hover::before {
+  animation: scanline 0.2s linear infinite;
+  opacity: 1;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes project-glitch {
+  0% { transform: scale(1.1) translate(0); }
+  20% { transform: scale(1.1) translate(-2px, 2px); }
+  40% { transform: scale(1.1) translate(-2px, -2px); }
+  60% { transform: scale(1.1) translate(2px, 2px); }
+  80% { transform: scale(1.1) translate(2px, -2px); }
+  100% { transform: scale(1.1) translate(0); }
+}
+
+.project-item:hover .project-img {
+  display: block;
+  animation: project-img-zoom 0.3s ease-out forwards;
+}
+
+@keyframes project-img-zoom {
+  from { transform: scale(1.2); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.project-item:hover .project-initials {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* If no image exists, initials shouldn't hide */
+.project-item:hover .project-icon:not(:has(.project-img)) .project-initials {
+  opacity: 1;
   color: #fff;
+  text-shadow: 2px 0 #ff00c1, -2px 0 #00fff9;
+  animation: flicker 0.1s infinite;
+}
+
+/* Optional: Subtle pulse for the default initials */
+.project-item:not(.active) .project-initials {
+  animation: project-initials-pulse 2s infinite ease-in-out;
+}
+
+@keyframes project-initials-pulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 10px rgba(var(--accent-rgb, var(--accent-rgb)), 0.4); }
+  50% { opacity: 0.8; text-shadow: 0 0 5px rgba(var(--accent-rgb, var(--accent-rgb)), 0.2); }
+}
+
+.project-item.active {
+  border-radius: 4px; /* Matches hover sharp edges */
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+.project-item.active .project-initials {
+  color: #fff;
+  text-shadow: 0 0 10px #fff;
 }
 
 .project-item.action {
-  background-color: var(--bg-primary);
-  color: var(--text-success);
+  color: var(--neon-lime);
+  border: 1px dashed rgba(0, 255, 65, 0.3);
 }
 
 .project-item.action:hover {
-  background-color: var(--accent-success);
-  color: #fff;
-}
-
-/* Selected indicator */
-.project-item.active::before {
-  content: "";
-  position: absolute;
-  left: -12px;
-  width: 8px;
-  height: 40px;
-  border-radius: 0 4px 4px 0;
-  background-color: var(--text-normal);
-}
-
-.project-item:hover:not(.active)::before {
-  content: "";
-  position: absolute;
-  left: -12px;
-  width: 8px;
-  height: 20px;
-  border-radius: 0 4px 4px 0;
-  background-color: var(--text-normal);
-  transform: scaleY(1);
-}
-
-.project-icon {
-  font-weight: 500;
-  font-size: 16px;
+  background-color: var(--neon-lime);
+  color: #000;
+  border: 1px solid var(--neon-lime);
+  box-shadow: 0 0 20px var(--neon-lime);
 }
 
 .project-separator {
   width: 32px;
   height: 2px;
-  background-color: var(--bg-modifier-active);
-  border-radius: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
 }

@@ -1,18 +1,34 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../store';
-import { Target, Loader2, Mail, Lock, User } from 'lucide-react';
+import { Target, Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import './LoginView.css';
 
 const LoginView = () => {
   const [isRegister, setIsRegister] = useState(false);
-  const [email, setEmail] = useState('');
+  
+  // Load saved emails from localStorage
+  const getSavedEmails = (): string[] => {
+    const saved = localStorage.getItem('zs_saved_emails');
+    return saved ? JSON.parse(saved) : [];
+  };
+
+  const [savedEmailList, setSavedEmailList] = useState<string[]>(getSavedEmails());
+  const [email, setEmail] = useState(savedEmailList[0] || ''); // Pre-fill with last used
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const login = useAppStore(state => state.login);
   const signUp = useAppStore(state => state.signUp);
+
+  const saveEmail = (newEmail: string) => {
+    if (!newEmail) return;
+    const updated = [newEmail, ...savedEmailList.filter(e => e !== newEmail)].slice(0, 5);
+    setSavedEmailList(updated);
+    localStorage.setItem('zs_saved_emails', JSON.stringify(updated));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,13 +43,38 @@ const LoginView = () => {
           return;
         }
         const { error } = await signUp(email, password, username);
-        if (error) setErrorMsg(error.message);
+        if (error) {
+          setErrorMsg(
+            error.message.toLowerCase().includes('rate limit') 
+              ? 'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.' 
+              : error.message
+          );
+          setLoading(false);
+          return;
+        }
+        saveEmail(email);
       } else {
         const { error } = await login(email, password);
-        if (error) setErrorMsg('Email ou senha incorretos.');
+        if (error) {
+          setErrorMsg(
+            error.status === 429 || error.message.toLowerCase().includes('rate limit')
+              ? 'Muitas tentativas de login. Por segurança, aguarde alguns minutos e tente novamente.'
+              : 'Email ou senha incorretos.'
+          );
+          setLoading(false);
+          return;
+        }
+        saveEmail(email);
       }
-    } catch (err) {
-      setErrorMsg('Ocorreu um erro inesperado.');
+      // If successful, the App.tsx ProtectedRoute will handle redirect
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setErrorMsg(
+        err?.status === 429 
+          ? 'Muitas tentativas. Por segurança, aguarde alguns minutos.' 
+          : 'Certifique-se de que os dados estão corretos ou tente novamente.'
+      );
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -41,10 +82,10 @@ const LoginView = () => {
 
   return (
     <div className="login-container">
-      <div className="login-box glass-panel">
+      <div className="login-box glass-panel flicker">
         <Target size={64} className="login-logo" />
-        <h2>{isRegister ? 'Crie sua conta' : 'Bem-vindo de volta'}</h2>
-        <p>Acesse a rede segura do Zero Signal.</p>
+        <h2 className="neon-text">{isRegister ? 'SISTEMA DE CADASTRO' : 'BEM-VINDO DE VOLTA'}</h2>
+        <p>ACESSE A REDE SEGURA DO ZERO SIGNAL.</p>
         
         <form onSubmit={handleSubmit} className="login-form">
           {isRegister && (
@@ -52,7 +93,7 @@ const LoginView = () => {
               <User size={18} />
               <input 
                 type="text" 
-                placeholder="Nome de Usuário" 
+                placeholder="NOME DE USUÁRIO" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={loading}
@@ -65,38 +106,52 @@ const LoginView = () => {
             <Mail size={18} />
             <input 
               type="email" 
-              placeholder="Seu Email" 
+              placeholder="EMAIL_ADDR" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
+              list="saved-emails"
               required
             />
+            <datalist id="saved-emails">
+              {savedEmailList.map((e, i) => (
+                <option key={i} value={e} />
+              ))}
+            </datalist>
           </div>
 
           <div className="input-group">
             <Lock size={18} />
             <input 
-              type="password" 
-              placeholder="Sua Senha" 
+              type={showPassword ? "text" : "password"} 
+              placeholder="PASS_TOKEN" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
               required
             />
+            <button 
+              type="button" 
+              className="toggle-pass" 
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           {errorMsg && <div className="error-badge">{errorMsg}</div>}
 
-          <button type="submit" disabled={loading}>
-            {loading ? <Loader2 size={18} className="spin-icon" /> : (isRegister ? 'Criar Conta' : 'Entrar')}
+          <button id="submit-auth" type="submit" disabled={loading} className="cyber-button">
+            {loading ? <Loader2 size={18} className="spin-icon" /> : (isRegister ? 'CRIAR CONTA' : 'ENTRAR')}
           </button>
         </form>
 
         <div className="login-footer">
           {isRegister ? (
-            <p>Já tem uma conta? <span onClick={() => setIsRegister(false)}>Entrar</span></p>
+            <p>JÁ TEM UMA CONTA? <span onClick={() => setIsRegister(false)}>RETORNAR</span></p>
           ) : (
-            <p>Novo por aqui? <span onClick={() => setIsRegister(true)}>Cadastre-se</span></p>
+            <p>NOVO POR AQUI? <span onClick={() => { setIsRegister(true); setErrorMsg(''); }}>CADASTRE-SE</span></p>
           )}
         </div>
       </div>

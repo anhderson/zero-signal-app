@@ -1,41 +1,65 @@
+import React, { useState } from 'react';
 import './ProjectSidebar.css';
-import { Target, Plus } from 'lucide-react';
+import { Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store';
+import CreateServerModal from './CreateServerModal';
 
 const ProjectSidebar = () => {
-  const { projects, activeProjectId, setActiveProject, createProject } = useAppStore();
+  const navigate = useNavigate();
+  const { projects, activeProjectId, setActiveProject } = useAppStore();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const handleSelectProject = (id: string) => {
+    setActiveProject(id);
+    navigate('/chat');
+  };
 
   const handleCreateProject = () => {
-    const name = window.prompt("Qual o nome do novo projeto?");
-    if (name && name.trim()) {
-      createProject(name.trim());
-    }
+    setShowCreateModal(true);
   };
 
   return (
     <nav className="project-sidebar">
-      {/* Home/Fixed shortcut */}
-      <div className={`project-item ${!activeProjectId ? 'active' : ''}`} onClick={() => setActiveProject('')}>
+      {/* Home/Fixed shortcut — NOW CREATES PROJECTS */}
+      <div className={`project-item ${!activeProjectId ? 'active' : ''}`} onClick={handleCreateProject} title="Criar Fragmento do Todo">
         <Target size={24} />
       </div>
       <div className="project-separator" />
       
       {/* Dynamic Projects */}
-      {projects.map(p => (
-        <div 
-          key={p.id} 
-          className={`project-item ${activeProjectId === p.id ? 'active' : ''}`}
-          onClick={() => setActiveProject(p.id)}
-          title={p.name}
-        >
-          <div className="project-icon">{p.iconStr}</div>
-        </div>
-      ))}
+      {projects.map(p => {
+        // Prepare custom CSS style for the theme color if it exists
+        const customStyle = p.themeColor ? { '--neon-cyan': p.themeColor } as React.CSSProperties : undefined;
+        
+        return (
+          <div 
+            key={p.id} 
+            className={`project-item ${activeProjectId === p.id ? 'active' : ''}`}
+            onClick={() => handleSelectProject(p.id)}
+            title={p.name}
+            style={activeProjectId === p.id ? customStyle : undefined}
+          >
+            <div className="project-icon">
+              {p.iconUrl && (
+                <img src={p.iconUrl} alt={p.name} className="project-img" />
+              )}
+              <span className="project-initials">{p.iconStr || '??'}</span>
+            </div>
+          </div>
+        );
+      })}
 
-      {/* Create Button */}
-      <div className="project-item action" onClick={handleCreateProject}>
-        <Plus size={24} />
-      </div>
+      {showCreateModal && (
+        <CreateServerModal 
+          onClose={() => setShowCreateModal(false)} 
+          onCreated={(id) => {
+            setShowCreateModal(false);
+            setActiveProject(id);
+            navigate('/chat');
+          }}
+        />
+      )}
     </nav>
   );
 };

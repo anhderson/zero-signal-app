@@ -1,114 +1,459 @@
-import { useState } from 'react';
+import { Volume2, Video, VideoOff, Mic, MicOff, MonitorUp, PhoneOff, PhoneCall, Gamepad2, Monitor, Layout, X, Activity, Music } from 'lucide-react';
 import TopBar from '../components/TopBar';
-import { Volume2, Video, VideoOff, Mic, MicOff, MonitorUp, PhoneOff } from 'lucide-react';
+import ActivitiesOverlay from '../components/games/ActivitiesOverlay';
+import { useAppStore } from '../store';
+import { useVoiceActivity } from '../hooks/useVoiceActivity';
 import './VideoView.css';
 
-interface VideoUser {
-  id: string;
-  name: string;
-  avatarStr: string;
-  isMuted: boolean;
-  isVideoOff: boolean;
-  color?: string;
-  isLocal?: boolean;
-}
-
-const initialUsers: VideoUser[] = [
-  { id: '1', name: 'Zero Signal Dev', avatarStr: 'ZS', isMuted: false, isVideoOff: false },
-  { id: '2', name: 'User', avatarStr: 'US', color: 'var(--accent-success)', isMuted: true, isVideoOff: true, isLocal: true }
-];
+import { useState, useRef, useEffect } from 'react';
 
 const VideoView = () => {
-  const [users, setUsers] = useState<VideoUser[]>(initialUsers);
-  
-  // Local user state derived or managed
-  const localUser = users.find(u => u.isLocal);
-  const isConnected = !!localUser;
+  const {
+    currentUser,
+    activeChannelId,
+    channels,
+    voiceParticipants,
+    voiceSpeaking,
+    joinVoice,
+    leaveVoice,
+    toggleMuteSelf,
+    logEvent,
+    incrementStat,
+    activeProjectId,
+    setProfileSettings,
+    addXP
+  } = useAppStore();
 
-  const toggleMic = () => {
-    setUsers(prev => prev.map(u => u.isLocal ? { ...u, isMuted: !u.isMuted } : u));
-  };
+  const [isVideoOff, setIsVideoOff] = useState(true);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [showActivities, setShowActivities] = useState(false);
+  const [showSourcePicker, setShowSourcePicker] = useState(false);
+  const [availableSources, setAvailableSources] = useState<any[]>([]);
+  const [streamingQuality, setStreamingQuality] = useState<'sd' | 'hd' | 'fullhd'>('hd');
 
-  const toggleVideo = () => {
-    setUsers(prev => prev.map(u => u.isLocal ? { ...u, isVideoOff: !u.isVideoOff } : u));
-  };
+  const screenVideoRef = useRef<HTMLVideoElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
 
-  const leaveCall = () => {
-    setUsers(prev => prev.filter(u => !u.isLocal));
-  };
-
-  const joinCall = () => {
-    const newUser: VideoUser = {
-      id: '2',
-      name: 'User',
-      avatarStr: 'US',
-      color: 'var(--accent-success)',
-      isMuted: false,
-      isVideoOff: false,
-      isLocal: true
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const vids = devices.filter(d => d.kind === 'videoinput');
+        setCameras(vids);
+        if (vids.length > 0 && !selectedCameraId) {
+          setSelectedCameraId(vids[0].deviceId);
+        }
+      } catch (err) {}
     };
-    setUsers(prev => [...prev, newUser]);
-  }
+    getDevices();
+  }, [selectedCameraId]);
+
+  useEffect(() => {
+    if (localVideoRef.current && webcamStream) {
+      localVideoRef.current.srcObject = webcamStream;
+    }
+  }, [webcamStream]);
+
+  const activeChannel = channels.find(c => c.id === activeChannelId);
+  const localUser     = voiceParticipants.find(p => p.isLocal);
+  const isConnected   = !!localUser;
+  const isMuted       = localUser?.isMuted ?? false;
+
+  useVoiceActivity(currentUser?.id ?? '', isConnected, isMuted);
+
+  useEffect(() => {
+    if (screenVideoRef.current && screenStream) {
+      screenVideoRef.current.srcObject = screenStream;
+    }
+  }, [screenStream]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      if (screenStream) {
+        screenStream.getTracks().forEach(t => t.stop());
+        setScreenStream(null);
+      }
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(t => t.stop());
+        setWebcamStream(null);
+      }
+      setIsVideoOff(true);
+    }
+  }, [isConnected, screenStream, webcamStream]);
+
+  const toggleCamera = async () => {
+    if (!isVideoOff && webcamStream) {
+      webcamStream.getTracks().forEach(t => t.stop());
+      setWebcamStream(null);
+      setIsVideoOff(true);
+      if (activeProjectId) logEvent(activeProjectId, 'Vídeo: Desligado', 'Câmera foi desativada pelo usuário.');
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
+          audio: false
+        });
+        setWebcamStream(stream);
+        setIsVideoOff(false);
+        incrementStat('videoCount');
+        if (currentUser) addXP(currentUser.id, 100);
+        if (activeProjectId) logEvent(activeProjectId, 'Vídeo: Ligado', 'Câmera foi ativada pelo usuário.');
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const vids = devices.filter(d => d.kind === 'videoinput');
+        setCameras(vids);
+      } catch (err) {
+        console.error("Camera error:", err);
+        alert("Não foi possível acessar a câmera.");
+      }
+    }
+  };
+
+  const handleCameraChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newId = e.target.value;
+    setSelectedCameraId(newId);
+    if (!isVideoOff) {
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(t => t.stop());
+      }
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: newId } },
+            audio: false
+        });
+        setWebcamStream(newStream);
+      } catch (err) {
+        console.error("Erro ao trocar câmera", err);
+      }
+    }
+  };
+
+  const startScreenShare = async (sourceId: string) => {
+    try {
+      const constraints = {
+        sd: { width: 854, height: 480, frameRate: 15 },
+        hd: { width: 1280, height: 720, frameRate: 30 },
+        fullhd: { width: 1920, height: 1080, frameRate: 60 }
+      };
+      
+      const q = constraints[streamingQuality];
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: sourceId,
+            minWidth: q.width,
+            maxWidth: q.width,
+            minHeight: q.height,
+            maxHeight: q.height,
+            minFrameRate: q.frameRate,
+            maxFrameRate: q.frameRate
+          }
+        } as any
+      });
+      
+      setScreenStream(stream);
+      setShowSourcePicker(false);
+      if (activeProjectId) logEvent(activeProjectId, 'Transmissão: Iniciada', `Usuário iniciou compartilhamento em ${streamingQuality.toUpperCase()}`);
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          setScreenStream(null);
+          if (activeProjectId) logEvent(activeProjectId, 'Transmissão: Parada', 'O compartilhamento de tela foi encerrado.');
+        };
+      }
+    } catch (err: any) {
+      console.error("Erro ao iniciar transmissão:", err);
+      alert("Não foi possível iniciar a transmissão. Verifique as permissões do sistema.");
+    }
+  };
+
+  const handleShareScreen = async () => {
+    if (screenStream) {
+      screenStream.getTracks().forEach(t => t.stop());
+      setScreenStream(null);
+      if (activeProjectId) logEvent(activeProjectId, 'Transmissão: Parada', 'O usuário parou de compartilhar a tela.');
+      return;
+    }
+    
+    // Check if we are in Electron and fetch sources
+    const isElectron = !!(window as any).electronAPI;
+    if (isElectron) {
+      try {
+        const sources = await (window as any).electronAPI.getScreenSources();
+        setAvailableSources(sources);
+        setShowSourcePicker(true);
+      } catch (err) {
+        console.error("Erro ao buscar fontes:", err);
+      }
+    } else {
+      // Basic web fallback
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        setScreenStream(stream);
+      } catch (err) {}
+    }
+  };
+
+  const totalTiles = voiceParticipants.length + (screenStream ? 1 : 0);
+  const gridClass  = totalTiles === 0 ? '' : totalTiles === 1 ? 'grid-1' : totalTiles === 2 ? 'grid-2' : totalTiles <= 4 ? 'grid-4' : 'grid-many';
+
+  const handleJoin = () => {
+    if (activeChannelId) joinVoice(activeChannelId);
+  };
 
   return (
     <div className="view-container">
-      <TopBar title="Lounge Voice" icon={<Volume2 size={24} className="topbar-icon" />} />
-      
+      <TopBar
+        title={activeChannel?.name ?? 'Lounge'}
+        icon={<Volume2 size={20} className="topbar-icon" />}
+      />
+
       <div className="video-content">
-        <div className="video-grid">
-          {users.map(user => (
-            <div key={user.id} className="video-tile">
-              {!user.isVideoOff ? (
-                // Simulando video ativo - para o mockup mostraremos a cor de fundo pulsando ou vazia
-                <div className="video-active-simulation" style={{ width: '100%', height: '100%', backgroundColor: '#202225' }}>
-                   <div className="video-avatar" style={{backgroundColor: user.color || 'var(--accent-primary)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.8}}>
-                     {user.avatarStr}
-                   </div>
+        {totalTiles === 0 && (
+          <div className="empty-voice-state">
+            <Volume2 size={42} style={{ opacity: 0.15, marginBottom: 10 }} />
+            <p style={{ fontSize: '16px' }}>Nenhum participante</p>
+            <span style={{ fontSize: '13px' }}>Entre na chamada para começar</span>
+          </div>
+        )}
+
+        {totalTiles > 0 && (
+          <div className={`video-grid ${gridClass}`}>
+            {screenStream && (
+               <div className="video-tile screen-share-tile" style={{ padding: 0, backgroundColor: '#000' }}>
+                  <video
+                     ref={screenVideoRef}
+                     autoPlay
+                     playsInline
+                     muted
+                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                  <div className="video-overlay">
+                     <span className="video-user-name">Sua Tela</span>
+                  </div>
+               </div>
+            )}
+
+            {voiceParticipants.map(user => {
+              const isSpeaking = voiceSpeaking.has(user.id);
+              const avatarColor = user.isLocal ? 'var(--neon-cyan)' : 'var(--neon-magenta)';
+
+              return (
+                <div
+                  key={user.id}
+                  className={`video-tile ${isSpeaking ? 'speaking' : ''}`}
+                >
+                  <div className={`tile-speaking-ring ${isSpeaking ? 'active' : ''}`} />
+
+                  <div className="video-off-state" style={{ padding: (user.isLocal && webcamStream && !isVideoOff) ? 0 : undefined }}>
+                    {user.isLocal && webcamStream && !isVideoOff ? (
+                       <video 
+                         ref={localVideoRef}
+                         autoPlay
+                         playsInline
+                         muted 
+                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                       />
+                    ) : (
+                      <div
+                        className={`video-avatar ${isSpeaking ? 'speaking' : ''}`}
+                        style={{ '--avatar-color': avatarColor } as React.CSSProperties}
+                      >
+                        {user.avatarPhoto ? (
+                          <img
+                            src={user.avatarPhoto}
+                            alt={user.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                          />
+                        ) : (
+                          user.avatarStr
+                        )}
+                      </div>
+                    )}
+                    
+                    {user.isLocal && isVideoOff && (
+                      <span className="video-off-label">Câmera desligada</span>
+                    )}
+                  </div>
+
+                  <div className="video-overlay">
+                    <span className="video-user-name">
+                      {user.name}
+                    </span>
+                    {isSpeaking && <span className="speaking-badge">● falando</span>}
+                  </div>
+
+                  <div className={`mic-status ${!user.isMuted ? 'active' : ''}`}>
+                    {user.isMuted ? <MicOff size={14} /> : <Mic size={14} />}
+                  </div>
                 </div>
-              ) : (
-                <div className="video-avatar" style={{backgroundColor: user.color || 'var(--accent-primary)'}}>{user.avatarStr}</div>
-              )}
-              
-              <div className="video-overlay">
-                <span className="user-name">{user.name}</span>
-              </div>
-              <div className={`mic-status ${!user.isMuted ? 'active' : ''}`}>
-                {user.isMuted ? <MicOff size={16} /> : <Mic size={16} />}
-              </div>
-            </div>
-          ))}
-          
-          {users.length === 0 && (
-            <div style={{ color: 'var(--text-muted)' }}>O canal está vazio.</div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {isConnected ? (
           <div className="video-controls glass-panel">
-            <div className={`control-btn ${localUser?.isVideoOff ? 'muted' : ''}`} onClick={toggleVideo}>
-              {localUser?.isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
+            <div className="control-group-flex" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div
+                className={`control-btn ${isVideoOff ? 'muted' : ''}`}
+                onClick={toggleCamera}
+                title={isVideoOff ? 'Ligar câmera' : 'Desligar câmera'}
+              >
+                {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+                <span className="control-label">Câmera</span>
+              </div>
+            {!isVideoOff && (
+              <select 
+                 className="camera-selector" 
+                 value={selectedCameraId}
+                 onChange={handleCameraChange}
+                 title="Escolher Dispositivo de Vídeo"
+              >
+                {cameras.length === 0 && <option value="">Sem câmeras</option>}
+                {cameras.map((cam, i) => (
+                  <option key={cam.deviceId} value={cam.deviceId}>
+                    {cam.label || `Câmera ${i + 1}`}
+                  </option>
+                ))}
+              </select>
+            )}
             </div>
-            <div className="control-btn screen">
-              <MonitorUp size={24} />
+
+            <div 
+              className={`control-btn ${screenStream ? 'active screen-active' : 'screen'}`} 
+              onClick={handleShareScreen}
+              title={screenStream ? 'Parar de compartilhar' : 'Compartilhar tela'}
+            >
+              <MonitorUp size={20} />
+              <span className="control-label">Tela</span>
             </div>
-            <div className={`control-btn ${localUser?.isMuted ? 'muted' : ''}`} onClick={toggleMic}>
-              {localUser?.isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+
+            <div 
+              className={`control-btn ${showActivities ? 'active' : ''}`} 
+              onClick={() => setShowActivities(true)}
+              title="Atividades e Jogos"
+            >
+              <Gamepad2 size={20} />
+              <span className="control-label">Jogos</span>
             </div>
-            <div className="control-btn decline" onClick={leaveCall}>
-              <PhoneOff size={24} />
+
+            <div
+              className={`control-btn ${isMuted ? 'muted' : ''}`}
+              onClick={toggleMuteSelf}
+              title={isMuted ? 'Ativar microfone' : 'Silenciar'}
+            >
+              {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+              <span className="control-label">Mic</span>
+            </div>
+
+            <div className="control-btn" onClick={() => setProfileSettings(true, 'profile')} title="Escolher Status">
+              <Activity size={20} />
+              <span className="control-label">Status</span>
+            </div>
+
+            <div className="control-btn" onClick={() => setProfileSettings(true, 'sounds')} title="Efeitos Sonoros">
+              <Music size={20} />
+              <span className="control-label">Sons</span>
+            </div>
+
+            <div className="control-btn decline" onClick={leaveVoice} title="Sair da chamada">
+              <PhoneOff size={20} />
+              <span className="control-label">Sair</span>
             </div>
           </div>
         ) : (
           <div className="video-controls glass-panel" style={{ justifyContent: 'center' }}>
-            <button 
-              onClick={joinCall}
-              style={{ backgroundColor: 'var(--accent-success)', color: 'white', padding: '12px 24px', borderRadius: '24px', fontWeight: 'bold' }}
-            >
-              Entrar no Lounge
+            <button className="join-call-btn" onClick={handleJoin}>
+              <PhoneCall size={18} />
+              Entrar no {activeChannel?.name ?? 'Lounge'}
             </button>
           </div>
         )}
       </div>
+
+      {showActivities && <ActivitiesOverlay onClose={() => setShowActivities(false)} />}
+      {showSourcePicker && (
+        <div className="source-picker-overlay">
+          <div className="source-picker-modal">
+            <div className="source-picker-header">
+              <h3>Compartilhar Tela</h3>
+              <button className="close-btn" onClick={() => setShowSourcePicker(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="quality-selector">
+              <span>Qualidade:</span>
+              <button 
+                className={streamingQuality === 'sd' ? 'active' : ''} 
+                data-q="sd"
+                onClick={() => setStreamingQuality('sd')}
+              >
+                480p (SD)
+              </button>
+              <button 
+                className={streamingQuality === 'hd' ? 'active' : ''} 
+                data-q="hd"
+                onClick={() => setStreamingQuality('hd')}
+              >
+                720p (HD)
+              </button>
+              <button 
+                className={streamingQuality === 'fullhd' ? 'active' : ''} 
+                data-q="fullhd"
+                onClick={() => setStreamingQuality('fullhd')}
+              >
+                1080p (60fps)
+              </button>
+            </div>
+
+            <div className="sources-container">
+              <div className="source-section">
+                <h4><Monitor size={16} /> Selecione o Monitor (Tela Cheia)</h4>
+                <div className="sources-list">
+                  {availableSources.filter(s => s.id.startsWith('screen:')).length > 0 ? (
+                    availableSources.filter(s => s.id.startsWith('screen:')).map(source => (
+                      <div key={source.id} className="source-item monitor" onClick={() => startScreenShare(source.id)}>
+                        <Monitor size={22} className="source-icon neon-cyan" />
+                        <div className="source-details">
+                          <span className="source-name">{source.name}</span>
+                          <span className="source-type">Transmissão completa</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="source-empty">Nenhum monitor detectado</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="source-section">
+                <h4><Layout size={16} /> Programas Abertos</h4>
+                <div className="sources-list">
+                  {availableSources.filter(s => !s.id.startsWith('screen:')).map(source => (
+                    <div key={source.id} className="source-item" onClick={() => startScreenShare(source.id)}>
+                      {source.appIcon ? (
+                        <img src={source.appIcon} className="source-app-icon" />
+                      ) : (
+                        <Layout size={18} className="source-icon" />
+                      )}
+                      <span className="source-name">{source.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

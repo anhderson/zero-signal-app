@@ -1,0 +1,81 @@
+﻿
+node.exe : [18524:0407/1610
+59.121:ERROR:net\disk_cache
+\cache_util_win.cc:25] 
+Unable to move the cache: 
+Acesso negado. (0x5)
+No C:\Users\anhde\OneDrive\
+Documentos\Projetos\Laborat
+orio de 
+Desenvolvimento\Zero Signal
+\zerosignal\node_modules\.b
+in\electron.ps1:24 
+caractere:5
++     & "node$exe"  "$based
+ir/../electron/cli.js" 
+$args
++     ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~
+    + CategoryInfo         
+     : NotSpecified: ([18  
+  524:0407/161...o negad   
+ o. (0x5):String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+[18524:0407/161059.121:ERRO
+R:net\disk_cache\cache_util
+_win.cc:25] Unable to move 
+the cache: Acesso negado. 
+(0x5)
+[18524:0407/161059.121:ERRO
+R:net\disk_cache\disk_cache
+.cc:284] Unable to create 
+cache
+[18524:0407/161059.121:ERRO
+R:net\disk_cache\cache_util
+_win.cc:25] Unable to move 
+the cache: Acesso negado. 
+(0x5)
+[18524:0407/161059.121:ERRO
+R:gpu\ipc\host\gpu_disk_cac
+he.cc:725] Gpu Cache 
+Creation failed: -2
+[18524:0407/161059.121:ERRO
+R:net\disk_cache\disk_cache
+.cc:284] Unable to create 
+cache
+[18524:0407/161059.121:ERRO
+R:gpu\ipc\host\gpu_disk_cac
+he.cc:725] Gpu Cache 
+Creation failed: -2
+[18524:0407/161059.121:ERRO
+R:net\disk_cache\disk_cache
+.cc:284] Unable to create 
+cache
+[18524:0407/161059.121:ERRO
+R:gpu\ipc\host\gpu_disk_cac
+he.cc:725] Gpu Cache 
+Creation failed: -2
+[18524:0407/161105.187:ERRO
+R:storage\browser\quota\quo
+ta_database.cc:988] Could 
+not open the quota 
+database, resetting.
+[18524:0407/161108.124:ERRO
+R:storage\browser\quota\quo
+ta_database.cc:988] Could 
+not open the quota 
+database, resetting.
+[18524:0407/161111.030:ERRO
+R:storage\browser\quota\quo
+ta_database.cc:993] Failed 
+to reset the quota 
+database.
+[18524:0407/161111.030:ERRO
+R:storage\browser\quota\quo
+ta_database.cc:993] Failed 
+to reset the quota 
+database.

@@ -1,4 +1,5 @@
-// Preload script to expose safe APIs to the renderer process
-window.addEventListener('DOMContentLoaded', () => {
-  // Can add bridge APIs here if needed
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  getScreenSources: () => ipcRenderer.invoke('get-screen-sources')
 });

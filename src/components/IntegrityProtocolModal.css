@@ -1,0 +1,190 @@
+.integrity-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  background-image: 
+    radial-gradient(circle at center, rgba(255, 49, 49, 0.05), transparent 70%),
+    linear-gradient(rgba(10, 10, 15, 0.8), rgba(10, 10, 15, 0.8)),
+    url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.integrity-modal {
+  width: 550px;
+  max-width: 95vw;
+  background: rgba(10, 10, 14, 0.95);
+  border-radius: 4px; /* Industrial look */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 0 50px rgba(255, 49, 49, 0.1);
+  overflow: hidden;
+}
+
+.neon-border-red {
+  border: 1px solid #ff3131;
+  box-shadow: 0 0 15px rgba(255, 49, 49, 0.2), inset 0 0 15px rgba(255, 49, 49, 0.05);
+}
+
+.integrity-header {
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid rgba(255, 49, 49, 0.2);
+  background: linear-gradient(to right, rgba(255, 49, 49, 0.05), transparent);
+}
+
+.alert-icon-flicker {
+  color: #ff3131;
+  filter: drop-shadow(0 0 10px #ff3131);
+  animation: alarmFlicker 2s infinite;
+}
+
+.header-text h1 {
+  font-family: var(--font-tech);
+  font-size: 20px;
+  color: #fff;
+  letter-spacing: 4px;
+  margin: 0;
+}
+
+.sub-header {
+  font-family: var(--font-tech);
+  font-size: 10px;
+  color: #ff3131;
+  letter-spacing: 2px;
+  opacity: 0.8;
+}
+
+.integrity-content {
+  padding: 30px;
+  flex: 1;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.warning-box {
+  background: rgba(255, 49, 49, 0.1);
+  border: 1px dashed #ff3131;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ff3131;
+  font-family: var(--font-tech);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 25px;
+}
+
+.protocol-text {
+  color: var(--text-normal);
+  font-size: 14px;
+  line-height: 1.8;
+  text-align: justify;
+  margin: 0 0 25px;
+}
+
+.protocol-details {
+  display: flex;
+  gap: 20px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.integrity-footer {
+  padding: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.agree-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: 0.2s;
+}
+
+.agree-checkbox:hover {
+  color: #fff;
+}
+
+.agree-checkbox input {
+  display: none;
+}
+
+.custom-check {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff3131;
+  transition: 0.2s;
+}
+
+.agree-checkbox.checked .custom-check {
+  border-color: #ff3131;
+  background: rgba(255, 49, 49, 0.1);
+  box-shadow: 0 0 10px rgba(255, 49, 49, 0.2);
+}
+
+.accept-btn {
+  width: 100%;
+  padding: 15px;
+  background: #ff3131;
+  color: #fff;
+  border: none;
+  font-family: var(--font-tech);
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 4px;
+}
+
+.accept-btn:hover:not(.disabled) {
+  box-shadow: 0 0 30px rgba(255, 49, 49, 0.4);
+  transform: translateY(-2px);
+}
+
+.accept-btn.disabled {
+  background: #2a1010;
+  color: #4a2020;
+  cursor: not-allowed;
+}
+
+@keyframes alarmFlicker {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+/* Scrollbar red */
+.content-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.content-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.content-scroll::-webkit-scrollbar-thumb {
+  background: #ff3131;
+  border-radius: 2px;
+}
