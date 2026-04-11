@@ -4,7 +4,6 @@ import {
   PlusCircle, Smile, Image as ImageIcon, Hash, Edit2, Trash2, X, Check, BarChart2, Calendar, Palette, Cpu, Eye
 } from 'lucide-react';
 import { useAppStore, BOT_ZERO_ID, BOT_GUST_ID, getAchievementName } from '../store';
-import { ServerLogModal } from '../components/ServerLogModal';
 import './ChatView.css';
 
 const BOT_ID = BOT_ZERO_ID;
@@ -36,7 +35,7 @@ const ChatView = () => {
   const { 
     messages, addMessage, deleteMessage, editMessage, votePoll, closePoll, joinMeeting, currentUser, 
     activeChannelId, channels, activeProjectId,
-    showServerLogs, setShowServerLogs, members, hasPermission,
+    members, hasPermission,
     toggleReaction
   } = useAppStore();
   
@@ -146,10 +145,8 @@ const ChatView = () => {
   }, [activeChannelId, loadMessages]);
 
   useEffect(() => {
-    if (!showServerLogs) {
-      scrollToBottom();
-    }
-  }, [channelMessages, showServerLogs]);
+    scrollToBottom();
+  }, [channelMessages]);
 
   const handleSendMessage = (e?: React.KeyboardEvent<HTMLInputElement>, textOverride?: string) => {
     const textMsg = textOverride || inputValue;
@@ -472,18 +469,14 @@ const ChatView = () => {
     <div className={`view-container chat-design-${chatDesign}`}>
       <div className="chat-topbar-ext">
         <TopBar 
-          title={showServerLogs ? 'Auditoria do Servidor' : (activeChannel?.name ?? 'geral')} 
+          title={activeChannel?.name ?? 'geral'} 
           icon={<Hash size={20} className="topbar-hash" />} 
         />
       </div>
 
       <div className="chat-layout-wrapper">
         <div className="chat-content">
-          {showServerLogs ? (
-            <ServerLogModal onClose={() => setShowServerLogs(false)} />
-          ) : (
-            <>
-              <div className="messages-area">
+          <div className="messages-area">
                 <div className="chat-welcome">
                   <div className="welcome-icon">#</div>
                   <h1>Bem-vindo a #{activeChannel?.name ?? 'geral'}!</h1>
@@ -802,8 +795,6 @@ const ChatView = () => {
                   </div>
                 )}
               </div>
-            </>
-          )}
         </div>
 
         {/* MembersSidebar removed, now in ProjectLayout */}

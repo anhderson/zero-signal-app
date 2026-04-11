@@ -1,7 +1,12 @@
 .log-modal-overlay {
-  width: 100%;
-  height: 100%;
-  background: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(5, 6, 8, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 50;
   display: flex;
   flex-direction: column;
 }
@@ -9,13 +14,15 @@
 .log-modal-container {
   width: 100%;
   height: 100%;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: log-fade-in 0.3s ease;
+}
+
+@keyframes log-fade-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .log-modal-header {

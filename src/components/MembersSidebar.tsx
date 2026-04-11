@@ -176,7 +176,12 @@ const { members, setShowServerLogs, activeProjectId, projects, voiceSpeaking } =
       </div>
 
       <div className="members-footer">
-        <button className="log-btn-neon" onClick={() => setShowServerLogs(true)}>
+        <button className="log-btn-neon" onClick={() => {
+          if (activeProjectId) {
+            useAppStore.getState().loadServerLogs(activeProjectId);
+            setShowServerLogs(true);
+          }
+        }}>
           <FileStack size={14} /> AUDITORIA / LOGS
         </button>
       </div>

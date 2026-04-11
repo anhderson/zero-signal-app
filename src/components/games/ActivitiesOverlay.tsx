@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Gamepad2, Grid3X3 } from 'lucide-react';
+import { X, Gamepad2, Grid3X3, UserPlus } from 'lucide-react';
 import NeonChess from './NeonChess';
 import NeonTicTacToe from './NeonTicTacToe';
 import NeonSnake from './NeonSnake';
 import { useAppStore } from '../../store';
+import { useGameSync } from '../../hooks/useGameSync';
 import './NeonGames.css';
 
 interface ActivitiesOverlayProps {
@@ -11,29 +12,27 @@ interface ActivitiesOverlayProps {
 }
 
 const ActivitiesOverlay: React.FC<ActivitiesOverlayProps> = ({ onClose }) => {
-  const [activeGame, setActiveGame] = useState<'menu' | 'chess' | 'tictactoe' | 'snake'>('menu');
-  const { logEvent, activeProjectId } = useAppStore();
+  const [activeGame, setActiveGame] = useState<'menu' | 'chess' | 'tictactoe' | 'snake' | 'inviting'>('menu');
+  const [targetGame, setTargetGame] = useState<any>(null);
+  const { logEvent, activeProjectId, voiceParticipants, gameInvite, setGameInvite, gameSession, setGameSession } = useAppStore();
+  const { invitePlayer, acceptInvite } = useGameSync();
 
   const gameNames: Record<string, string> = {
     chess: 'Xadrez Neon',
     tictactoe: 'Jogo da Velha',
-    snake: 'Neon Snake'
+    snake: 'Neon Snake',
+    inviting: 'Convidando...'
   };
 
   useEffect(() => {
-    if (activeGame !== 'menu' && activeProjectId) {
-      logEvent(activeProjectId, 'Atividade: Iniciada', `O usuário começou a jogar: ${gameNames[activeGame]}`);
+    if (gameSession && activeGame === 'inviting') {
+        setActiveGame(gameSession.type as any);
     }
-    
-    // Cleanup function as a surrogate for "closed game"
-    return () => {
-      // Note: This logic only works if we know which game was active before menu or close
-      // But for simplicity, we'll log it when the overlay itself closes or game switches back to menu
-    };
-  }, [activeGame]);
+  }, [gameSession, activeGame]);
 
   const handleSelectGame = (game: 'chess' | 'tictactoe' | 'snake') => {
-    setActiveGame(game);
+    setTargetGame(game);
+    setActiveGame('inviting');
   };
 
   const handleClose = () => {
@@ -43,9 +42,23 @@ const ActivitiesOverlay: React.FC<ActivitiesOverlayProps> = ({ onClose }) => {
     onClose();
   };
 
+  const handleInvite = (userId: string) => {
+    invitePlayer(userId, targetGame);
+    if (activeProjectId) logEvent(activeProjectId, 'Atividade: Convite', `Convidou um aliado para ${gameNames[targetGame]}`);
+  };
+
   return (
     <div className="games-overlay" onClick={(e) => e.target === e.currentTarget && handleClose()}>
       <div className="games-header">
+        {gameInvite && (
+           <div className="game-invite-toast">
+              <span>{voiceParticipants.find(p => p.id === gameInvite.from)?.name || 'Aliado'} te convidou para {gameNames[gameInvite.type]}!</span>
+              <div className="invite-actions">
+                <button className="accept-btn" onClick={acceptInvite}>Aceitar</button>
+                <button className="reject-btn" onClick={() => setGameInvite(null)}>Recusar</button>
+              </div>
+           </div>
+        )}
         <button className="close-games-btn" onClick={handleClose} title="Fechar Atividades">
           <X size={24} />
         </button>
@@ -74,15 +87,37 @@ const ActivitiesOverlay: React.FC<ActivitiesOverlayProps> = ({ onClose }) => {
         </>
       )}
 
+      {activeGame === 'inviting' && (
+        <div className="invite-screen">
+            <h3>Convidar para {gameNames[targetGame]}</h3>
+            <p>Selecione alguém na chamada para desafiar:</p>
+            <div className="invite-list">
+                {voiceParticipants.filter(p => !p.isLocal).map(p => (
+                    <div key={p.id} className="invite-row">
+                        <span>{p.name}</span>
+                        <button className="invite-btn" onClick={() => handleInvite(p.id)}>
+                            <UserPlus size={16} /> Convidar
+                        </button>
+                    </div>
+                ))}
+                {voiceParticipants.filter(p => !p.isLocal).length === 0 && (
+                    <p style={{ opacity: 0.5, fontStyle: 'italic' }}>Nenhum aliado disponível no momento.</p>
+                )}
+            </div>
+            <button className="back-btn" onClick={() => setActiveGame('menu')}>Voltar</button>
+        </div>
+      )}
+
       {activeGame === 'chess' && <NeonChess />}
       {activeGame === 'tictactoe' && <NeonTicTacToe />}
       {activeGame === 'snake' && <NeonSnake />}
       
-      {activeGame !== 'menu' && (
+      {['chess', 'tictactoe', 'snake'].includes(activeGame) && (
         <button 
           className="back-to-menu-btn" 
           onClick={() => {
             if (activeProjectId) logEvent(activeProjectId, 'Atividade: Encerrada', `O usuário fechou o jogo: ${gameNames[activeGame]}`);
+            setGameSession(null);
             setActiveGame('menu');
           }}
         >

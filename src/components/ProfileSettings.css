@@ -1009,3 +1009,184 @@
   letter-spacing: 0.5px;
   text-align: center;
 }
+/* ============================================
+   VOICE TAB
+   ============================================ */
+.voice-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.voice-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.voice-mode-card {
+  display: flex;
+  align-items: center;
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.voice-mode-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.voice-mode-card.active {
+  background: rgba(var(--accent-rgb), 0.04);
+  border-color: var(--neon-cyan);
+  box-shadow: 
+    0 0 15px rgba(var(--accent-rgb), 0.1),
+    inset 0 0 15px rgba(var(--accent-rgb), 0.02);
+}
+
+.mode-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.active .mode-icon {
+  color: var(--neon-cyan);
+  background: rgba(var(--accent-rgb), 0.1);
+  box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.15);
+}
+
+.mode-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mode-title {
+  font-family: var(--font-tech);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.mode-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.mode-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.active .mode-radio {
+  border-color: var(--neon-cyan);
+}
+
+.active .mode-radio::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--neon-cyan);
+}
+
+/* Keybind Section */
+.keybind-container {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.keybind-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-tech);
+}
+
+.key-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.key-value {
+  background: #222;
+  color: var(--neon-cyan);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  border: 1px solid var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.2);
+  min-width: 60px;
+  text-align: center;
+}
+
+.change-key-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: var(--font-tech);
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.change-key-btn:hover, .change-key-btn:focus {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: var(--neon-cyan);
+  outline: none;
+}
+
+/* Sensitivity Mock */
+.sensitivity-mock {
+  margin-top: 8px;
+}
+
+.sensitivity-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sensitivity-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-lime));
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.3);
+}

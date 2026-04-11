@@ -211,6 +211,8 @@ export interface VoiceParticipant {
   avatarStr: string;
   avatarPhoto?: string;
   isMuted: boolean;
+  isVideoOn: boolean;
+  isStreaming: boolean;
   isLocal: boolean;
   featuredAchievements: string[];
   channelId: string;
@@ -268,6 +270,16 @@ export interface Notification {
   link?: string;
   isRead: boolean;
   createdAt: string;
+}
+
+export interface GameSession {
+  type: 'chess' | 'tictactoe' | 'snake';
+  players: string[];
+  board?: any;
+  turn?: string;
+  winner?: string;
+  status: 'invite' | 'active' | 'finished';
+  initiatorId: string;
 }
 
 interface AppState {
@@ -348,7 +360,15 @@ interface AppState {
   unlockAchievements: (ids: string[]) => Promise<void>;
   toggleFeaturedAchievement: (id: string) => Promise<void>;
   unlockedAchievement: string | null;
-  setUnlockedAchievement: (id: string | null) => void;
+  clearUnlockedAchievement: () => void;
+
+  gameSession: GameSession | null;
+  setGameSession: (session: GameSession | null) => void;
+  gameInvite: { from: string, type: string } | null;
+  setGameInvite: (invite: { from: string, type: string } | null) => void;
+
+  userVolumes: Record<string, number>;
+  setUserVolume: (userId: string, volume: number) => void;
   addXP: (userId: string, amount: number) => Promise<void>;
   subscribeToProfiles: () => void;
 
@@ -365,9 +385,11 @@ interface AppState {
   loadVoiceParticipants: () => Promise<void>;
   subscribeToVoiceParticipants: () => (() => void);
   joinVoice: (channelId: string) => Promise<void>;
-  leaveVoice: () => Promise<void>;
-  setSpeaking: (userId: string, isSpeaking: boolean) => Promise<void>;
-  toggleMuteSelf: () => Promise<void>;
+  leaveVoice: () => void;
+  setSpeaking: (userId: string, isSpeaking: boolean) => void;
+  setStreaming: (isStreaming: boolean) => void;
+  setVideoOn: (isVideoOn: boolean) => void;
+  toggleMuteSelf: () => void;
   _voiceSubscription: any;
 
   notes: Note[];
@@ -406,7 +428,7 @@ interface AppState {
   canManageSincronicidade: (projectId: string) => boolean;
 
   showProfileSettings: boolean;
-  activeProfileTab: 'profile' | 'friends' | 'gamification' | 'sounds';
+  activeProfileTab: 'profile' | 'friends' | 'gamification' | 'sounds' | 'voice';
   setProfileSettings: (show: boolean, tab?: 'profile' | 'friends' | 'gamification' | 'sounds') => void;
 
   userAliases: Record<string, string>;
@@ -424,13 +446,21 @@ interface AppState {
   isSecurityCritical: boolean;
   setSecurityCritical: (val: boolean) => void;
   userMutes: Record<string, number>; // userId -> timestamp of mute end
+  
+  // Voice Settings
+  pushToTalk: boolean;
+  pushToTalkKey: string;
+  isPTTPressed: boolean;
+  setPushToTalk: (enabled: boolean) => void;
+  setPushToTalkKey: (key: string) => void;
+  setPTTPressed: (pressed: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   currentUser: null,
   initialized: false,
   unlockedAchievement: null,
-  setUnlockedAchievement: (id) => set({ unlockedAchievement: id }),
+  clearUnlockedAchievement: () => set({ unlockedAchievement: null }),
   _realtimeChannel: null,
   _channelsSubscription: null,
   activeProjectId: localStorage.getItem('zs_active_project'),
@@ -446,6 +476,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   voiceParticipants: [],
   voiceSpeaking: new Set<string>(),
   activeVoiceChannelId: null,
+  userVolumes: JSON.parse(localStorage.getItem('zs_user_volumes') || '{}'),
+  setUserVolume: (u, v) => {
+    const volumes = { ...get().userVolumes, [u]: v };
+    localStorage.setItem('zs_user_volumes', JSON.stringify(volumes));
+    set({ userVolumes: volumes });
+  },
+  gameSession: null,
+  setGameSession: (gs) => set({ gameSession: gs }),
+  gameInvite: null,
+  setGameInvite: (gi) => set({ gameInvite: gi }),
   notes: [],
   tasks: [],
   serverLogs: [],
@@ -457,6 +497,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   isSecurityCritical: false,
   userMutes: {},
   messageHistory: {} as Record<string, number[]>, // Track timestamps for spam  
+  
+  // Voice Settings
+  pushToTalk: JSON.parse(localStorage.getItem('pushToTalk') || 'false'),
+  pushToTalkKey: localStorage.getItem('pushToTalkKey') || 'Control',
+  isPTTPressed: false,
+
+  setPushToTalk: (enabled) => {
+    localStorage.setItem('pushToTalk', JSON.stringify(enabled));
+    set({ pushToTalk: enabled });
+  },
+
+  setPushToTalkKey: (key) => {
+    localStorage.setItem('pushToTalkKey', key);
+    set({ pushToTalkKey: key });
+  },
+
+  setPTTPressed: (pressed) => {
+    set({ isPTTPressed: pressed });
+  },
   
   checkAuth: async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -595,16 +654,48 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { data, error } = await supabase.from('projects').select('*').order('created_at');
       if (error) throw error;
       if (data) {
-        const projects = data.map(p => ({ 
-          id: p.id, 
-          name: p.name, 
-          iconStr: p.icon_str,
-          ownerId: p.owner_id,
-          iconUrl: p.icon_url,
-          themeColor: p.color,
-          roles: p.roles || [],
-          isPermanent: p.is_permanent
-        }));
+        const projects = data.map(p => {
+          let name = p.name;
+          // Fix names if they are missing spaces
+          if (name === 'PhantomTroupe') name = 'Phantom Troupe';
+          if (name === 'ProjectZero') name = 'Project Zero';
+          if (name === 'ZeroSignal') name = 'Zero Signal';
+
+          return { 
+            id: p.id, 
+            name, 
+            iconStr: p.icon_str,
+            ownerId: p.owner_id,
+            iconUrl: p.icon_url,
+            themeColor: p.color,
+            roles: p.roles || [],
+            isPermanent: p.is_permanent
+          };
+        });
+
+        // Custom Sort: Non-permanent at top, then permanent at bottom
+        const bottomOrder = ['Zero Signal', 'Project Zero', 'Phantom Troupe'];
+        
+        projects.sort((a, b) => {
+          // Rule 1: Non-permanent (isPermanent false) come before Permanent
+          if (a.isPermanent !== b.isPermanent) {
+            return a.isPermanent ? 1 : -1;
+          }
+
+          // Rule 2: If both are permanent, check bottom order
+          if (a.isPermanent && b.isPermanent) {
+            const aIndex = bottomOrder.indexOf(a.name);
+            const bIndex = bottomOrder.indexOf(b.name);
+
+            if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+            if (aIndex !== -1) return 1;
+            if (bIndex !== -1) return -1;
+          }
+
+          // Default: maintain original order
+          return 0;
+        });
+
         set({ projects });
         
         const persistedId = get().activeProjectId;
@@ -1554,6 +1645,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         avatarStr: (p.profiles as any)?.avatar_str || '??',
         avatarPhoto: (p.profiles as any)?.banner_url,
         isMuted: p.is_muted,
+        isVideoOn: p.is_video_on || false,
+        isStreaming: p.is_streaming || false,
         isLocal: p.user_id === get().currentUser?.id,
         featuredAchievements: (p.profiles as any)?.featured_achievements || [],
         channelId: p.channel_id
@@ -1605,7 +1698,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       user_id: currentUser.id,
       channel_id: channelId,
       is_muted: false,
-      is_speaking: false
+      is_speaking: false,
+      is_video_on: false,
+      is_streaming: false
     });
 
     const activeProject = get().activeProjectId;
@@ -1653,17 +1748,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().loadVoiceParticipants();
   },
 
-  setSpeaking: async (userId, isSpeaking) => {
-    const currentUser = get().currentUser;
-    if (currentUser && userId === currentUser.id) {
-       await supabase.from('voice_participants').update({ is_speaking: isSpeaking }).eq('user_id', userId);
-    }
-    
-    set(state => {
+  setSpeaking: (userId, isSpeaking) => {
+    set((state) => {
       const next = new Set(state.voiceSpeaking);
-      if (isSpeaking) next.add(userId); else next.delete(userId);
+      if (isSpeaking) next.add(userId);
+      else next.delete(userId);
       return { voiceSpeaking: next };
     });
+  },
+
+  setStreaming: (isStreaming: boolean) => {
+    const currentUser = get().currentUser;
+    if (!currentUser) return;
+    supabase.from('voice_participants').update({ is_streaming: isStreaming }).eq('user_id', currentUser.id).then();
+    set(state => ({
+      voiceParticipants: state.voiceParticipants.map(p => p.id === currentUser.id ? { ...p, isStreaming } : p)
+    }));
+  },
+
+  setVideoOn: (isVideoOn: boolean) => {
+    const currentUser = get().currentUser;
+    if (!currentUser) return;
+    supabase.from('voice_participants').update({ is_video_on: isVideoOn }).eq('user_id', currentUser.id).then();
+    set(state => ({
+      voiceParticipants: state.voiceParticipants.map(p => p.id === currentUser.id ? { ...p, isVideoOn } : p)
+    }));
   },
 
   toggleMuteSelf: async () => {

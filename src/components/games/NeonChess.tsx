@@ -1,76 +1,81 @@
 import React, { useState, useEffect } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
+import { useAppStore } from '../../store';
+import { useGameSync } from '../../hooks/useGameSync';
 import './NeonGames.css';
 
 const NeonChess: React.FC = () => {
-  const [game, setGame] = useState(new Chess());
-  const [fen, setFen] = useState(game.fen());
-  const [status, setStatus] = useState('Sua vez');
+  const { gameSession, currentUser } = useAppStore();
+  const { sendMove, resetGame } = useGameSync();
+  const [game, setGame] = useState(new Chess(gameSession?.board || undefined));
 
   useEffect(() => {
-    updateStatus();
-  }, [fen]);
+    if (gameSession?.board && gameSession.board !== game.fen()) {
+        setGame(new Chess(gameSession.board));
+    }
+  }, [gameSession?.board]);
+
+  if (!gameSession) return null;
+
+  const isWhite = gameSession.players[0] === currentUser?.id;
+  const isMyTurn = (game.turn() === 'w' && isWhite) || (game.turn() === 'b' && !isWhite);
 
   const updateStatus = () => {
-    if (game.isCheckmate()) {
-      setStatus('Xeque-mate! Game Over.');
-    } else if (game.isDraw()) {
-      setStatus('Empate!');
-    } else if (game.isCheck()) {
-      setStatus('Xeque!');
-    } else {
-      setStatus(game.turn() === 'w' ? 'Vez das Brancas' : 'Vez das Pretas');
-    }
+    if (game.isCheckmate()) return 'Xeque-mate! Game Over.';
+    if (game.isDraw()) return 'Empate!';
+    if (game.isCheck()) return 'Xeque!';
+    return game.turn() === 'w' ? 'Vez das Brancas' : 'Vez das Pretas';
   };
 
-  const makeMove = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
-    if (!targetSquare) return false;
+  const status = updateStatus();
+
+  function makeMove({ sourceSquare, targetSquare }: { sourceSquare: string, targetSquare: string }): boolean {
+    if (!isMyTurn) return false;
+
     try {
-      // Create a new instance because chess.js mutates state and React needs new refs sometimes
-      const gameCopy = new Chess(game.fen());
-      const move = gameCopy.move({
+      const move = game.move({
         from: sourceSquare,
         to: targetSquare,
-        promotion: 'q', // auto promote to queen for simplicity
+        promotion: 'q',
       });
 
       if (move === null) return false;
       
+      const gameCopy = new Chess(game.fen());
       setGame(gameCopy);
-      setFen(gameCopy.fen());
+      
+      const otherPlayer = gameSession.players.find(p => p !== currentUser?.id);
+      sendMove(gameCopy.fen(), otherPlayer!, game.isCheckmate() ? currentUser?.id : undefined);
+      
       return true;
     } catch (e) {
       return false;
     }
-  };
+  }
 
   const handleReset = () => {
     const newGame = new Chess();
     setGame(newGame);
-    setFen(newGame.fen());
+    resetGame(newGame.fen());
   };
 
   return (
     <div className="neon-chess-container">
       <div className="neon-chess-header">
-         <h3>Xadrez Neon</h3>
-         <div className={`status-badge ${game.turn() === 'w' ? 'white-turn' : 'black-turn'}`}>
-            {status}
+         <h3>Xadrez Neon {isWhite ? '(BRANCAS)' : '(PRETAS)'}</h3>
+         <div className={`status-badge ${game.turn() === 'w' ? 'white-turn' : 'black-turn'} ${isMyTurn ? 'active-turn' : ''}`}>
+            {isMyTurn ? `SUA VEZ (${status})` : `ESPERANDO (${status})`}
          </div>
       </div>
       <div className="chessboard-wrapper">
         <Chessboard 
            options={{
-             position: fen,
+             position: game.fen(),
              onPieceDrop: makeMove,
-             darkSquareStyle: { backgroundColor: 'rgba(var(--accent-rgb), 0.15)' },
-             lightSquareStyle: { backgroundColor: 'rgba(255, 0, 255, 0.05)' },
-             boardStyle: {
-               borderRadius: '8px',
-               boxShadow: '0 0 20px rgba(var(--accent-rgb), 0.2)',
-               border: '2px solid var(--neon-cyan)'
-             }
+             boardOrientation: isWhite ? 'white' : 'black',
+             darkSquareStyle: { backgroundColor: 'rgba(0, 255, 255, 0.15)' },
+             lightSquareStyle: { backgroundColor: 'rgba(255, 0, 255, 0.05)' }
            }}
         />
       </div>

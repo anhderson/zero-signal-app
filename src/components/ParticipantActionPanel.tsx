@@ -17,11 +17,17 @@ const ParticipantActionPanel: React.FC<ParticipantActionPanelProps> = ({
 }) => {
   const { 
     setProfileSettings, setUserAlias, userAliases, activeProjectId, 
-    projects, hasPermission, currentUser, assignRole, removeRole
+    projects, hasPermission, currentUser, assignRole, removeRole,
+    userVolumes, setUserVolume
   } = useAppStore();
-  const [volume, setVolume] = useState(80);
   const [isLocalMuted, setIsLocalMuted] = useState(false);
   const [showRoleAssigner, setShowRoleAssigner] = useState(false);
+
+  const volume = userVolumes[participant.id] ?? 80;
+  
+  const handleVolumeChange = (newVal: number) => {
+    setUserVolume(participant.id, newVal);
+  };
 
   const project = projects.find(p => p.id === activeProjectId);
   const userRoleIds = project?.memberRoles?.[participant.id] || [];
@@ -111,22 +117,20 @@ const ParticipantActionPanel: React.FC<ParticipantActionPanelProps> = ({
             </div>
           </div>
 
-          {!isLocal && (
-            <div className="action-section volume-section">
-              <label>VOLUME DO USUÁRIO</label>
-              <div className="volume-slider-wrap">
-                <Volume2 size={16} />
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={volume} 
-                  onChange={(e) => setVolume(parseInt(e.target.value))}
-                />
-                <span className="volume-val">{volume}%</span>
-              </div>
+          <div className="action-section volume-section">
+            <label>{isLocal ? 'VOLUME DE ENTRADA (MIC)' : 'VOLUME DO USUÁRIO'}</label>
+            <div className="volume-slider-wrap">
+              <Volume2 size={16} />
+              <input 
+                type="range" 
+                min="0" 
+                max="100" 
+                value={volume} 
+                onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
+              />
+              <span className="volume-val">{volume}%</span>
             </div>
-          )}
+          </div>
 
           <div className="action-section">
             <div className="section-header">

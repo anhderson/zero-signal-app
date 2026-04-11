@@ -3,6 +3,10 @@ import TopBar from '../components/TopBar';
 import ActivitiesOverlay from '../components/games/ActivitiesOverlay';
 import { useAppStore } from '../store';
 import { useVoiceActivity } from '../hooks/useVoiceActivity';
+import { useWebRTC } from '../hooks/useWebRTC';
+import ParticipantActionPanel from '../components/ParticipantActionPanel';
+import RemoteAudio from '../components/RemoteAudio';
+import RemoteVideo from '../components/RemoteVideo';
 import './VideoView.css';
 
 import { useState, useRef, useEffect } from 'react';
@@ -21,12 +25,20 @@ const VideoView = () => {
     incrementStat,
     activeProjectId,
     setProfileSettings,
-    addXP
+    addXP,
+    userAliases,
+    activeVoiceChannelId,
+    userVolumes,
+    setStreaming,
+    setVideoOn
   } = useAppStore();
 
+  const [selectedParticipant, setSelectedParticipant] = useState<any | null>(null);
   const [isVideoOff, setIsVideoOff] = useState(true);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
+
+  const { remoteStreams } = useWebRTC(activeVoiceChannelId, screenStream || webcamStream);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [showActivities, setShowActivities] = useState(false);
@@ -89,6 +101,7 @@ const VideoView = () => {
       webcamStream.getTracks().forEach(t => t.stop());
       setWebcamStream(null);
       setIsVideoOff(true);
+      setVideoOn(false);
       if (activeProjectId) logEvent(activeProjectId, 'Vídeo: Desligado', 'Câmera foi desativada pelo usuário.');
     } else {
       try {
@@ -98,6 +111,7 @@ const VideoView = () => {
         });
         setWebcamStream(stream);
         setIsVideoOff(false);
+        setVideoOn(true);
         incrementStat('videoCount');
         if (currentUser) addXP(currentUser.id, 100);
         if (activeProjectId) logEvent(activeProjectId, 'Vídeo: Ligado', 'Câmera foi ativada pelo usuário.');
@@ -158,6 +172,7 @@ const VideoView = () => {
       });
       
       setScreenStream(stream);
+      setStreaming(true);
       setShowSourcePicker(false);
       if (activeProjectId) logEvent(activeProjectId, 'Transmissão: Iniciada', `Usuário iniciou compartilhamento em ${streamingQuality.toUpperCase()}`);
 
@@ -165,6 +180,7 @@ const VideoView = () => {
       if (videoTrack) {
         videoTrack.onended = () => {
           setScreenStream(null);
+          setStreaming(false);
           if (activeProjectId) logEvent(activeProjectId, 'Transmissão: Parada', 'O compartilhamento de tela foi encerrado.');
         };
       }
@@ -178,6 +194,7 @@ const VideoView = () => {
     if (screenStream) {
       screenStream.getTracks().forEach(t => t.stop());
       setScreenStream(null);
+      setStreaming(false);
       if (activeProjectId) logEvent(activeProjectId, 'Transmissão: Parada', 'O usuário parou de compartilhar a tela.');
       return;
     }
@@ -201,7 +218,10 @@ const VideoView = () => {
     }
   };
 
-  const totalTiles = voiceParticipants.length + (screenStream ? 1 : 0);
+  const streamingParticipants = voiceParticipants.filter(p => !p.isLocal && p.isStreaming);
+  const videoParticipants = voiceParticipants.filter(p => !p.isLocal && p.isVideoOn);
+
+  const totalTiles = voiceParticipants.length + (screenStream ? 1 : 0) + streamingParticipants.length;
   const gridClass  = totalTiles === 0 ? '' : totalTiles === 1 ? 'grid-1' : totalTiles === 2 ? 'grid-2' : totalTiles <= 4 ? 'grid-4' : 'grid-many';
 
   const handleJoin = () => {
@@ -227,7 +247,7 @@ const VideoView = () => {
         {totalTiles > 0 && (
           <div className={`video-grid ${gridClass}`}>
             {screenStream && (
-               <div className="video-tile screen-share-tile" style={{ padding: 0, backgroundColor: '#000' }}>
+               <div className="video-tile screen-share-tile local-stream" style={{ padding: 0, backgroundColor: '#000' }}>
                   <video
                      ref={screenVideoRef}
                      autoPlay
@@ -236,10 +256,21 @@ const VideoView = () => {
                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                   <div className="video-overlay">
-                     <span className="video-user-name">Sua Tela</span>
+                     <span className="video-user-name">Minha Tela</span>
                   </div>
                </div>
             )}
+
+            {/* Remote Screen Shares */}
+            {streamingParticipants.map(participant => (
+              <div key={`stream-${participant.id}`} className="video-tile screen-share-tile remote-stream" style={{ padding: 0, backgroundColor: '#000' }}>
+                <RemoteVideo stream={remoteStreams[participant.id]} />
+                <div className="video-overlay">
+                  <span className="video-user-name">{userAliases[participant.id] || participant.name} - Transmitindo</span>
+                  <span className="live-badge">AO VIVO</span>
+                </div>
+              </div>
+            ))}
 
             {voiceParticipants.map(user => {
               const isSpeaking = voiceSpeaking.has(user.id);
@@ -249,6 +280,8 @@ const VideoView = () => {
                 <div
                   key={user.id}
                   className={`video-tile ${isSpeaking ? 'speaking' : ''}`}
+                  onClick={() => setSelectedParticipant(user)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className={`tile-speaking-ring ${isSpeaking ? 'active' : ''}`} />
 
@@ -261,6 +294,8 @@ const VideoView = () => {
                          muted 
                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                        />
+                    ) : (!user.isLocal && user.isVideoOn && remoteStreams[user.id]) ? (
+                        <RemoteVideo stream={remoteStreams[user.id]} isAvatarCover />
                     ) : (
                       <div
                         className={`video-avatar ${isSpeaking ? 'speaking' : ''}`}
@@ -285,7 +320,7 @@ const VideoView = () => {
 
                   <div className="video-overlay">
                     <span className="video-user-name">
-                      {user.name}
+                      {userAliases[user.id] || user.name}
                     </span>
                     {isSpeaking && <span className="speaking-badge">● falando</span>}
                   </div>
@@ -379,7 +414,25 @@ const VideoView = () => {
         )}
       </div>
 
+      {selectedParticipant && (
+        <ParticipantActionPanel 
+          participant={selectedParticipant}
+          isLocal={selectedParticipant.id === currentUser?.id}
+          onClose={() => setSelectedParticipant(null)}
+        />
+      )}
+
       {showActivities && <ActivitiesOverlay onClose={() => setShowActivities(false)} />}
+      
+      {/* Remote Audio Streams */}
+      {Object.entries(remoteStreams).map(([userId, stream]) => (
+        <RemoteAudio 
+          key={userId} 
+          stream={stream} 
+          volume={userVolumes[userId] ?? 80} 
+        />
+      ))}
+
       {showSourcePicker && (
         <div className="source-picker-overlay">
           <div className="source-picker-modal">

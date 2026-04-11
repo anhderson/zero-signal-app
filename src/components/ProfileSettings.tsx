@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAppStore, ACHIEVEMENTS, MEMBERSHIP_MEDALS } from '../store';
-import { X, UserPlus, Save, Camera, Upload } from 'lucide-react';
+import { X, UserPlus, Save, Camera, Upload, Mic, Settings } from 'lucide-react';
 import './ProfileSettings.css';
 
 interface ProfileSettingsProps {
@@ -57,8 +57,20 @@ const SOUNDBOARD_EFFECTS = [
 ];
 
 const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
-  const { currentUser, updateProfile, addFriend, toggleFeaturedAchievement, activeProfileTab, members, addXP } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'friends' | 'gamification' | 'sounds'>(activeProfileTab);
+  const { 
+    currentUser, 
+    updateProfile, 
+    addFriend, 
+    toggleFeaturedAchievement, 
+    activeProfileTab, 
+    members, 
+    addXP,
+    pushToTalk,
+    setPushToTalk,
+    pushToTalkKey,
+    setPushToTalkKey
+  } = useAppStore();
+  const [activeTab, setActiveTab] = useState<'profile' | 'friends' | 'gamification' | 'sounds' | 'voice'>(activeProfileTab);
 
   const [name, setName]               = useState(currentUser?.name || '');
   const [decoration, setDecoration]   = useState(currentUser?.decorationId || 'none');
@@ -178,6 +190,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
           >
             Sons de Chamada
           </button>
+          <button
+            className={`sidebar-item ${activeTab === 'voice' ? 'active' : ''}`}
+            onClick={() => setActiveTab('voice')}
+          >
+            Voz & Sensibilidade
+          </button>
           <div className="spacer" />
           <button className="sidebar-item logout" onClick={onClose}>Fechar</button>
         </div>
@@ -185,7 +203,13 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
         {/* ---- Content ---- */}
         <div className="settings-content">
           <div className="content-header">
-            <h3>{activeTab === 'profile' ? 'Perfil do Usuário' : activeTab === 'friends' ? 'Amigos' : 'Nível e Medalhas'}</h3>
+            <h3>{
+              activeTab === 'profile' ? 'Perfil do Usuário' : 
+              activeTab === 'friends' ? 'Amigos' : 
+              activeTab === 'gamification' ? 'Nível e Medalhas' :
+              activeTab === 'voice' ? 'Voz & Sensibilidade' :
+              'Sons de Chamada'
+            }</h3>
             <button className="close-btn" onClick={onClose}><X size={20} /></button>
           </div>
 
@@ -474,6 +498,74 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
               </div>
             )}
             
+            {activeTab === 'voice' && (
+              <div className="voice-tab animate-slide-in">
+                <div className="settings-group">
+                  <label>MODO DE ENTRADA</label>
+                  <p className="section-hint">Escolha como seu microfone será ativado nas chamadas.</p>
+                  
+                  <div className="voice-mode-options">
+                    <button 
+                      className={`voice-mode-card ${!pushToTalk ? 'active' : ''}`}
+                      onClick={() => setPushToTalk(false)}
+                    >
+                      <div className="mode-icon"><Mic size={24} /></div>
+                      <div className="mode-details">
+                        <span className="mode-title">Atividade de Voz</span>
+                        <span className="mode-desc">Seu microfone fica sempre ativo quando você fala.</span>
+                      </div>
+                      <div className="mode-radio" />
+                    </button>
+
+                    <button 
+                      className={`voice-mode-card ${pushToTalk ? 'active' : ''}`}
+                      onClick={() => setPushToTalk(true)}
+                    >
+                      <div className="mode-icon"><Settings size={24} /></div>
+                      <div className="mode-details">
+                        <span className="mode-title">Push to Talk (Pressionar)</span>
+                        <span className="mode-desc">O microfone só ativa quando você pressiona uma tecla.</span>
+                      </div>
+                      <div className="mode-radio" />
+                    </button>
+                  </div>
+                </div>
+
+                {pushToTalk && (
+                  <div className="settings-group animate-slide-in" style={{ marginTop: '24px' }}>
+                    <label>ATALHO DE TECLADO (HOTKEY)</label>
+                    <p className="section-hint">Clique no campo e pressione a tecla que deseja usar para falar.</p>
+                    
+                    <div className="keybind-container">
+                      <div className="keybind-display">
+                        <span className="key-label">TECLA ATUAL:</span>
+                        <span className="key-value">{pushToTalkKey}</span>
+                      </div>
+                      <button 
+                        className="change-key-btn"
+                        onKeyDown={(e) => {
+                          e.preventDefault();
+                          setPushToTalkKey(e.key);
+                        }}
+                      >
+                        Pressione uma tecla para mudar...
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="settings-group" style={{ marginTop: '32px', opacity: 0.6 }}>
+                  <label>SENSIBILIDADE DE ENTRADA</label>
+                  <p className="section-hint">Ajuste automático de volume (Protocolo em fase beta).</p>
+                  <div className="sensitivity-mock">
+                    <div className="sensitivity-bar">
+                      <div className="sensitivity-fill" style={{ width: '65%' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'sounds' && (
               <div className="sounds-tab animate-slide-in">
                 <div className="settings-group">

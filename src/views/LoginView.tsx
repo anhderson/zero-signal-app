@@ -19,6 +19,7 @@ const LoginView = () => {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const login = useAppStore(state => state.login);
   const signUp = useAppStore(state => state.signUp);
@@ -33,6 +34,7 @@ const LoginView = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
     setLoading(true);
 
     try {
@@ -53,6 +55,9 @@ const LoginView = () => {
           return;
         }
         saveEmail(email);
+        setSuccessMsg('CONTA CRIADA COM SUCESSO! VERIFIQUE SEU EMAIL PARA CONFIRMAR O CADASTRO ANTES DE ENTRAR.');
+        setLoading(false);
+        return; // Stay on screen to show message
       } else {
         const { error } = await login(email, password);
         if (error) {
@@ -141,6 +146,7 @@ const LoginView = () => {
           </div>
 
           {errorMsg && <div className="error-badge">{errorMsg}</div>}
+          {successMsg && <div className="success-badge">{successMsg}</div>}
 
           <button id="submit-auth" type="submit" disabled={loading} className="cyber-button">
             {loading ? <Loader2 size={18} className="spin-icon" /> : (isRegister ? 'CRIAR CONTA' : 'ENTRAR')}
@@ -149,9 +155,9 @@ const LoginView = () => {
 
         <div className="login-footer">
           {isRegister ? (
-            <p>JÁ TEM UMA CONTA? <span onClick={() => setIsRegister(false)}>RETORNAR</span></p>
+            <p>JÁ TEM UMA CONTA? <span onClick={() => { setIsRegister(false); setErrorMsg(''); setSuccessMsg(''); }}>RETORNAR</span></p>
           ) : (
-            <p>NOVO POR AQUI? <span onClick={() => { setIsRegister(true); setErrorMsg(''); }}>CADASTRE-SE</span></p>
+            <p>NOVO POR AQUI? <span onClick={() => { setIsRegister(true); setErrorMsg(''); setSuccessMsg(''); }}>CADASTRE-SE</span></p>
           )}
         </div>
       </div>

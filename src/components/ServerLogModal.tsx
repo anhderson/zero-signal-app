@@ -13,7 +13,8 @@ export const ServerLogModal: React.FC<ServerLogModalProps> = ({ onClose }) => {
   const filteredLogs = serverLogs.filter(log => log.projectId === activeProjectId);
 
   return (
-    <div className="log-modal-container">
+    <div className="log-modal-overlay">
+      <div className="log-modal-container">
       <div className="log-modal-header">
         <div className="header-title">
           <Activity className="log-icon-neon" />
@@ -48,6 +49,7 @@ export const ServerLogModal: React.FC<ServerLogModalProps> = ({ onClose }) => {
             </div>
           ))
         )}
+      </div>
       </div>
     </div>
   );
