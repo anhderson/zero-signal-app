@@ -1,7 +1,7 @@
 {
   "name": "zerosignal",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Zero Signal - Communication and Project Management Platform",
   "author": "Anhderson",
   "main": "electron/main.js",

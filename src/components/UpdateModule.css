@@ -1,0 +1,132 @@
+.update-module-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.update-module-box {
+  background: #1e1f22;
+  border: 1px solid var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90vw;
+  padding: 32px 24px;
+  text-align: center;
+  position: relative;
+}
+
+.update-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #949ba4;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.update-close-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.update-content h3 {
+  margin: 16px 0 8px 0;
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+}
+
+.update-content p {
+  color: #b5bac1;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.update-icon {
+  margin: 0 auto;
+}
+
+.pulse-animation {
+  color: var(--neon-cyan);
+  animation: updatePulse 2s infinite ease-in-out;
+}
+
+.success-color {
+  color: #43b581;
+}
+
+.error-color {
+  color: #f04747;
+}
+
+.update-action-btn {
+  background: var(--neon-cyan);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 12px 24px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.update-action-btn:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.update-action-btn.neutral-btn {
+  background: #4f545c;
+  color: #fff;
+  box-shadow: none;
+}
+
+.update-action-btn.neutral-btn:hover {
+  background: #5d6269;
+}
+
+.update-error-text {
+  display: block;
+  background: #111214;
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 2px solid #f04747;
+  color: #f04747;
+  font-family: monospace;
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+  text-align: left;
+  word-break: break-all;
+}
+
+@keyframes updatePulse {
+  0% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0.5; transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

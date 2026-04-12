@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Shield, Mic, Camera, Bell, Monitor, CheckCircle, Info } from 'lucide-react';
 import './PermissionsModal.css';
 
@@ -10,31 +10,53 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({ onComplete }) => {
   const [step, setStep] = React.useState(1);
   const [granted, setGranted] = React.useState<Set<string>>(new Set());
 
-  const requestPermission = async (type: 'media' | 'notifications') => {
+  const handleNext = useCallback(() => {
+    if (step < 3) {
+      setStep(prev => prev + 1);
+    } else {
+      localStorage.setItem('zs_first_run_complete', 'true');
+      onComplete();
+    }
+  }, [step, onComplete]);
+
+  const requestPermission = useCallback(async (type: 'media' | 'notifications') => {
     try {
       if (type === 'media') {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         stream.getTracks().forEach(track => track.stop());
-        setGranted(prev => new Set(prev).add('camera').add('mic'));
+        setGranted(prev => {
+          const next = new Set(prev);
+          next.add('camera');
+          next.add('mic');
+          return next;
+        });
+        // Auto-advance after a small delay to show visual feedback
+        setTimeout(handleNext, 800);
       } else if (type === 'notifications') {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          setGranted(prev => new Set(prev).add('notifications'));
+          setGranted(prev => {
+            const next = new Set(prev);
+            next.add('notifications');
+            return next;
+          });
+          // Auto-advance after a small delay
+          setTimeout(handleNext, 800);
         }
       }
     } catch (err) {
       console.error('Permission request failed:', err);
     }
-  };
+  }, [handleNext]);
 
-  const handleNext = () => {
-    if (step < 3) {
-      setStep(step + 1);
-    } else {
-      localStorage.setItem('zs_first_run_complete', 'true');
-      onComplete();
+  // Auto-trigger permissions on mount of each step
+  useEffect(() => {
+    if (step === 1 && !granted.has('mic')) {
+      requestPermission('media');
+    } else if (step === 2 && !granted.has('notifications')) {
+      requestPermission('notifications');
     }
-  };
+  }, [step, granted, requestPermission]);
 
   return (
     <div className="permissions-overlay">
@@ -114,3 +136,4 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({ onComplete }) => {
 };
 
 export default PermissionsModal;
+

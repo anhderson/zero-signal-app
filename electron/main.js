@@ -167,15 +167,21 @@ app.whenReady().then(() => {
 
 autoUpdater.on('update-available', () => {
   console.log('Atualização disponível. Iniciando download...');
+  if (mainWindow) mainWindow.webContents.send('update_available');
 });
 
 autoUpdater.on('update-downloaded', () => {
   console.log('Atualização baixada. Instalando agora...');
-  autoUpdater.quitAndInstall();
+  if (mainWindow) mainWindow.webContents.send('update_downloaded');
 });
 
 autoUpdater.on('error', (err) => {
   console.error('Erro no auto-updater:', err);
+  if (mainWindow) mainWindow.webContents.send('update_error', err.message);
+});
+
+ipcMain.on('restart_app', () => {
+  autoUpdater.quitAndInstall();
 });
 
 app.on('window-all-closed', () => {
