@@ -219,7 +219,6 @@ const VideoView = () => {
   };
 
   const streamingParticipants = voiceParticipants.filter(p => !p.isLocal && p.isStreaming);
-  const videoParticipants = voiceParticipants.filter(p => !p.isLocal && p.isVideoOn);
 
   const totalTiles = voiceParticipants.length + (screenStream ? 1 : 0) + streamingParticipants.length;
   const gridClass  = totalTiles === 0 ? '' : totalTiles === 1 ? 'grid-1' : totalTiles === 2 ? 'grid-2' : totalTiles <= 4 ? 'grid-4' : 'grid-many';

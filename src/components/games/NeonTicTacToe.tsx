@@ -60,7 +60,7 @@ const NeonTicTacToe: React.FC = () => {
       </div>
 
       <div className="ttt-board">
-        {board.map((cell: string, i: number) => (
+        {board.map((cell: string | null, i: number) => (
           <div 
              key={i} 
              className={`ttt-cell ${cell === 'X' ? 'cell-x' : cell === 'O' ? 'cell-o' : ''} ${!cell && isMyTurn ? 'cell-playable' : ''}`}

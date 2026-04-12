@@ -41,6 +41,27 @@
   margin-bottom: 8px;
   padding: 0 6px;
   text-shadow: 0 0 5px rgba(255, 0, 255, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.active-call-title {
+  color: var(--neon-lime);
+  text-shadow: 0 0 8px var(--neon-lime);
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+.group-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.1), transparent);
+  margin: 15px 10px 10px;
 }
 
 /* ---- Member Item ---- */
@@ -64,6 +85,53 @@
 
 .member-item.offline {
   opacity: 0.45;
+}
+
+.member-item.in-call {
+  background-color: rgba(var(--accent-rgb), 0.03);
+  margin-bottom: 4px;
+}
+
+.member-item.in-call:hover {
+  background-color: rgba(var(--accent-rgb), 0.06);
+}
+
+.member-avatar.in-call-avatar {
+  border-radius: 4px; /* Square with rounded corners for participants */
+}
+.member-avatar.in-call-avatar .avatar-content-inner {
+  border-radius: 4px;
+}
+
+.call-status-icons {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.status-icon {
+  opacity: 0.6;
+}
+
+.status-icon.speaking {
+  color: var(--neon-lime);
+  opacity: 1;
+  filter: drop-shadow(0 0 3px var(--neon-lime));
+}
+
+.status-icon.muted {
+  color: var(--neon-red);
+}
+
+.status-icon.video {
+  color: var(--neon-cyan);
+}
+
+.channel-link {
+  font-size: 9px;
+  color: var(--neon-cyan);
+  opacity: 0.7;
+  letter-spacing: 0.5px;
 }
 
 /* ---- Avatar ---- */

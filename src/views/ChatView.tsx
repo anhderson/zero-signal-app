@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import TopBar from '../components/TopBar';
 import { 
-  PlusCircle, Smile, Image as ImageIcon, Hash, Edit2, Trash2, X, Check, BarChart2, Calendar, Palette, Cpu, Eye
+  PlusCircle, Smile, Image as ImageIcon, Hash, Edit2, Trash2, X, Check, BarChart2, Calendar, Palette, Cpu, Eye,
+  Activity, Video
 } from 'lucide-react';
 import { useAppStore, BOT_ZERO_ID, BOT_GUST_ID, getAchievementName } from '../store';
 import './ChatView.css';
@@ -33,8 +34,10 @@ const getBotColor = (day: number) => {
 
 const ChatView = () => {
   const { 
-    messages, addMessage, deleteMessage, editMessage, votePoll, closePoll, joinMeeting, currentUser, 
-    activeChannelId, channels, activeProjectId,
+    currentUser, messages, activeChannelId, channels, activeProjectId, 
+    addMessage, deleteMessage, editMessage,
+    activeVoiceChannelId, voiceParticipants,
+    votePoll, closePoll, joinMeeting, 
     members, hasPermission,
     toggleReaction
   } = useAppStore();
@@ -473,6 +476,30 @@ const ChatView = () => {
           icon={<Hash size={20} className="topbar-hash" />} 
         />
       </div>
+
+      {activeVoiceChannelId && (
+        <div className="voice-active-banner">
+          <div className="voice-info">
+             <div className="active-glow-pulse" />
+             <Activity size={16} className="v-icon" />
+             <div className="v-details">
+                <span className="v-status">CONEXÃO ATIVA</span>
+                <span className="v-channel"># {channels.find(c => c.id === activeVoiceChannelId)?.name || 'Vórtex'}</span>
+             </div>
+          </div>
+          <div className="v-participants-preview">
+             {voiceParticipants.slice(0, 3).map(p => (
+               <div key={p.id} className="v-mini-avatar" title={p.name}>
+                  {p.avatarPhoto ? <img src={p.avatarPhoto} alt="" /> : p.avatarStr[0]}
+               </div>
+             ))}
+             {voiceParticipants.length > 3 && <span className="v-more">+{voiceParticipants.length - 3}</span>}
+          </div>
+          <button className="v-jump-btn" onClick={() => window.location.hash = '#/voice'}>
+             <Video size={14} /> VOICE SYNC
+          </button>
+        </div>
+      )}
 
       <div className="chat-layout-wrapper">
         <div className="chat-content">

@@ -1,4 +1,4 @@
-import { FileStack, Crown } from 'lucide-react';
+import { FileStack, Crown, Mic, MicOff, Video, Activity } from 'lucide-react';
 import { useAppStore, BOT_ZERO_ID, BOT_GUST_ID, getAchievementName } from '../store';
 import './MembersSidebar.css';
 
@@ -37,7 +37,10 @@ const getStatusColor = (status?: string) => {
 };
 
 const MembersSidebar = () => {
-const { members, setShowServerLogs, activeProjectId, projects, voiceSpeaking } = useAppStore();
+  const { 
+    members, setShowServerLogs, activeProjectId, projects, 
+    voiceSpeaking, voiceParticipants, channels 
+  } = useAppStore();
   const activeProject = projects.find(p => p.id === activeProjectId);
   const ownerId = activeProject?.ownerId;
 
@@ -66,6 +69,48 @@ const { members, setShowServerLogs, activeProjectId, projects, voiceSpeaking } =
           </div>
         ) : (
           <div className="member-list-inner">
+            {/* ---- IN CALL SECTION (HIGHLIGHTED) ---- */}
+            {voiceParticipants.length > 0 && (
+              <div className="member-group in-call-section">
+                <div className="group-title active-call-title">
+                  <Activity size={12} /> EM CHAMADA — {voiceParticipants.length}
+                </div>
+                {voiceParticipants.map(participant => {
+                  const isSpeaking = voiceSpeaking.has(participant.id);
+                  const channel = channels.find(c => c.id === participant.channelId);
+                  
+                  return (
+                    <div key={participant.id} className={`member-item in-call ${isSpeaking ? 'is-speaking' : ''}`}>
+                      <div className={`member-avatar in-call-avatar ${isSpeaking ? 'speaking' : ''}`}>
+                         <div className="avatar-content-inner">
+                            {participant.avatarPhoto 
+                              ? <img src={participant.avatarPhoto} alt={participant.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : participant.avatarStr
+                            }
+                         </div>
+                         <div className="status-indicator-wrapper">
+                           <div className="status-indicator online" style={{ backgroundColor: '#00cc44' }} />
+                         </div>
+                      </div>
+                      <div className="member-info">
+                        <div className="member-name-row">
+                          <span className="member-name">{participant.name}</span>
+                          <div className="call-status-icons">
+                            {participant.isMuted ? <MicOff size={10} className="status-icon muted" /> : (isSpeaking ? <Mic size={10} className="status-icon speaking" /> : <Mic size={10} className="status-icon" />)}
+                            {participant.isVideoOn && <Video size={10} className="status-icon video" />}
+                          </div>
+                        </div>
+                        <span className="member-role channel-link">
+                           # {channel?.name || 'vórtex'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="group-divider" />
+              </div>
+            )}
+
             {sortedOnline.length > 0 && (
               <div className="member-group">
                 <div className="group-title">Online — {sortedOnline.length}</div>

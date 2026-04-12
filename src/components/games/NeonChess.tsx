@@ -6,9 +6,10 @@ import { useGameSync } from '../../hooks/useGameSync';
 import './NeonGames.css';
 
 const NeonChess: React.FC = () => {
-  const { gameSession, currentUser } = useAppStore();
-  const { sendMove, resetGame } = useGameSync();
-  const [game, setGame] = useState(new Chess(gameSession?.board || undefined));
+   const { gameSession, currentUser } = useAppStore();
+   const { sendMove, resetGame } = useGameSync();
+   if (!gameSession) return null;
+   const [game, setGame] = useState(new Chess(gameSession.board || undefined));
 
   useEffect(() => {
     if (gameSession?.board && gameSession.board !== game.fen()) {
@@ -45,7 +46,7 @@ const NeonChess: React.FC = () => {
       const gameCopy = new Chess(game.fen());
       setGame(gameCopy);
       
-      const otherPlayer = gameSession.players.find(p => p !== currentUser?.id);
+      const otherPlayer = gameSession!.players.find(p => p !== currentUser?.id);
       sendMove(gameCopy.fen(), otherPlayer!, game.isCheckmate() ? currentUser?.id : undefined);
       
       return true;
@@ -72,7 +73,7 @@ const NeonChess: React.FC = () => {
         <Chessboard 
            options={{
              position: game.fen(),
-             onPieceDrop: makeMove,
+             onPieceDrop: makeMove as any,
              boardOrientation: isWhite ? 'white' : 'black',
              darkSquareStyle: { backgroundColor: 'rgba(0, 255, 255, 0.15)' },
              lightSquareStyle: { backgroundColor: 'rgba(255, 0, 255, 0.05)' }

@@ -18,7 +18,7 @@ const ACHIEVEMENT_DETAILS: Record<string, { name: string; icon: any; color: stri
 };
 
 const AchievementModal = () => {
-  const { unlockedAchievement, setUnlockedAchievement } = useAppStore();
+  const { unlockedAchievement, clearUnlockedAchievement } = useAppStore();
 
   useEffect(() => {
     if (unlockedAchievement) {
@@ -37,7 +37,7 @@ const AchievementModal = () => {
   return (
     <div className="achievement-modal-overlay">
       <div className="achievement-card">
-        <button className="close-btn" onClick={() => setUnlockedAchievement(null)}>
+        <button className="close-btn" onClick={() => clearUnlockedAchievement()}>
           <X size={20} />
         </button>
 
@@ -54,7 +54,7 @@ const AchievementModal = () => {
         <h2 className="achievement-title">{detail.name}</h2>
         <p className="achievement-subtitle">O seu protocolo foi atualizado com sucesso.</p>
 
-        <button className="confirm-btn" onClick={() => setUnlockedAchievement(null)}>
+        <button className="confirm-btn" onClick={() => clearUnlockedAchievement()}>
           CONTINUAR
         </button>
       </div>

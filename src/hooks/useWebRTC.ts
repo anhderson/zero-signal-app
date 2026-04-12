@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { supabase } from '../lib/supabase';
 
-interface PeerConnection {
-  pc: RTCPeerConnection;
-  stream: MediaStream | null;
-}
 
 export const useWebRTC = (channelId: string | null, additionalStream: MediaStream | null = null) => {
   const { currentUser, voiceParticipants, setSpeaking, pushToTalk, isPTTPressed } = useAppStore();
@@ -248,7 +244,7 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
   const handleOffer = async (userId: string, offer: RTCSessionDescriptionInit) => {
     let peer = peersRef.current[userId];
     if (!peer) {
-      const pc = createPeerConnection(userId, false);
+      createPeerConnection(userId, false);
       peer = peersRef.current[userId];
     }
     await peer.pc.setRemoteDescription(new RTCSessionDescription(offer));
