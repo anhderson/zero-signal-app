@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAppStore, ACHIEVEMENTS, MEMBERSHIP_MEDALS } from '../store';
 import { X, UserPlus, Save, Camera, Upload, Mic, Settings } from 'lucide-react';
+import pkg from '../../package.json';
 import './ProfileSettings.css';
 
 interface ProfileSettingsProps {
@@ -197,19 +198,36 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
             Voz & Sensibilidade
           </button>
           <div className="spacer" />
+          <div style={{ fontSize: '0.75rem', color: '#949ba4', textAlign: 'center', marginBottom: '8px', opacity: 0.6, fontFamily: "'Outfit', sans-serif" }}>
+            v{pkg.version}
+          </div>
           <button className="sidebar-item logout" onClick={onClose}>Fechar</button>
         </div>
 
         {/* ---- Content ---- */}
         <div className="settings-content">
           <div className="content-header">
-            <h3>{
-              activeTab === 'profile' ? 'Perfil do Usuário' : 
-              activeTab === 'friends' ? 'Amigos' : 
-              activeTab === 'gamification' ? 'Nível e Medalhas' :
-              activeTab === 'voice' ? 'Voz & Sensibilidade' :
-              'Sons de Chamada'
-            }</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <h3>{
+                activeTab === 'profile' ? 'Perfil do Usuário' : 
+                activeTab === 'friends' ? 'Amigos' : 
+                activeTab === 'gamification' ? 'Nível e Medalhas' :
+                activeTab === 'voice' ? 'Voz & Sensibilidade' :
+                'Sons de Chamada'
+              }</h3>
+              <span style={{ 
+                fontSize: '10px', 
+                background: 'rgba(0, 243, 255, 0.1)', 
+                color: 'var(--neon-cyan)', 
+                padding: '2px 8px', 
+                borderRadius: '4px',
+                border: '1px solid rgba(0, 243, 255, 0.2)',
+                fontFamily: 'var(--font-tech)',
+                letterSpacing: '1px'
+              }}>
+                V.{pkg.version}
+              </span>
+            </div>
             <button className="close-btn" onClick={onClose}><X size={20} /></button>
           </div>
 

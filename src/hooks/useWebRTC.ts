@@ -202,9 +202,14 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
     });
   }, [voiceParticipants, channelId, currentUser]);
 
+  const pendingCandidates = useRef<Record<string, RTCIceCandidateInit[]>>({});
+
   const createPeerConnection = (userId: string, isInitiator: boolean) => {
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' }
+      ]
     });
 
     const senders: Record<string, RTCRtpSender> = {};
@@ -254,18 +259,20 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
 
     peersRef.current[userId] = { pc, senders };
 
-    if (isInitiator) {
-      pc.createOffer().then(offer => {
-        pc.setLocalDescription(offer);
-        signalingRef.current?.send({
-          type: 'broadcast',
-          event: 'signal',
-          payload: { from: currentUser?.id, to: userId, signal: offer }
-        });
-      });
-    }
-
     return pc;
+  };
+
+  const processPendingCandidates = async (userId: string) => {
+    const peer = peersRef.current[userId];
+    if (peer && peer.pc.remoteDescription) {
+      const cands = pendingCandidates.current[userId] || [];
+      for (const cand of cands) {
+        try {
+          await peer.pc.addIceCandidate(new RTCIceCandidate(cand));
+        } catch(e) {}
+      }
+      pendingCandidates.current[userId] = [];
+    }
   };
 
   const handleOffer = async (userId: string, offer: RTCSessionDescriptionInit) => {
@@ -282,19 +289,26 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
       event: 'signal',
       payload: { from: currentUser?.id, to: userId, signal: answer }
     });
+    processPendingCandidates(userId);
   };
 
   const handleAnswer = async (userId: string, answer: RTCSessionDescriptionInit) => {
     const peer = peersRef.current[userId];
     if (peer) {
       await peer.pc.setRemoteDescription(new RTCSessionDescription(answer));
+      processPendingCandidates(userId);
     }
   };
 
   const handleCandidate = async (userId: string, candidate: RTCIceCandidateInit) => {
     const peer = peersRef.current[userId];
-    if (peer && peer.pc.remoteDescription) {
-      await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
+    if (peer && peer.pc.remoteDescription && peer.pc.remoteDescription.type) {
+      try {
+        await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch(e) {}
+    } else {
+      if (!pendingCandidates.current[userId]) pendingCandidates.current[userId] = [];
+      pendingCandidates.current[userId].push(candidate);
     }
   };
 

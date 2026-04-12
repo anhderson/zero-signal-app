@@ -34,6 +34,16 @@ export const ACHIEVEMENTS = [
   { id: 'inbox_33',  name: 'Mensageiro 33',   icon: <Mail size={18} />,          color: 'magenta',hint: '33 mensagens privadas trocadas.' },
 ];
 
+export const PRINCIPIOS_LIST = [
+  "Ordem Cósmica", "Desordem Caótica", "Matéria Primordial", "Antimatéria Etérea",
+  "Luz Iluminadora", "Trevas Primordiais", "Vida Eterna", "Morte Transitória",
+  "Criação Divina", "Destruição Inevitável", "Espírito Elevado", "Carne Terrena",
+  "Conhecimento Iluminado", "Ignorância das Sombras", "Harmonia Universal",
+  "Caos Entrópico", "Ascensão Espiritual", "Queda Material", "União das Almas",
+  "Separação Ilusória", "Eternidade Imutável", "Temporalidade Efêmera",
+  "Divindade Interior", "Humanidade Limitada"
+];
+
 export const MEMBERSHIP_MEDALS = [
   { id: '1m',  label: '1 Mês',  months: 1,  color: 'white',  title: 'Novato do Protocolo' },
   { id: '3m',  label: '3 Meses', months: 3,  color: 'red',    title: 'Sobrevivente Digital' },
@@ -218,6 +228,14 @@ export interface VoiceParticipant {
   channelId: string;
 }
 
+export interface VoiceSignal {
+  id: string;
+  userId: string;
+  userName: string;
+  action: 'mute' | 'unmute' | 'join' | 'leave';
+  timestamp: number;
+}
+
 export interface ServerLog {
   id: string;
   projectId: string;
@@ -369,7 +387,7 @@ interface AppState {
 
   userVolumes: Record<string, number>;
   setUserVolume: (userId: string, volume: number) => void;
-  addXP: (userId: string, amount: number) => Promise<void>;
+  addXP: (userId: string, amount: number, actionKey?: string) => Promise<void>;
   subscribeToProfiles: () => void;
 
   appTheme: 'neon' | 'glass-blur' | 'tech-transparent';
@@ -380,6 +398,7 @@ interface AppState {
 
   voiceParticipants: VoiceParticipant[];
   voiceSpeaking: Set<string>;
+  voiceSignals: VoiceSignal[];
   activeVoiceChannelId: string | null;
   voiceStartTime: number | null;
   loadVoiceParticipants: () => Promise<void>;
@@ -390,6 +409,7 @@ interface AppState {
   setStreaming: (isStreaming: boolean) => void;
   setVideoOn: (isVideoOn: boolean) => void;
   toggleMuteSelf: () => void;
+  addVoiceSignal: (userId: string, userName: string, action: VoiceSignal['action']) => void;
   _voiceSubscription: any;
 
   notes: Note[];
@@ -475,6 +495,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   globalDesign: parseInt(localStorage.getItem('zs_global_design') || '7'), // Default 7 (White)
   voiceParticipants: [],
   voiceSpeaking: new Set<string>(),
+  voiceSignals: [],
   activeVoiceChannelId: null,
   userVolumes: JSON.parse(localStorage.getItem('zs_user_volumes') || '{}'),
   setUserVolume: (u, v) => {
@@ -822,6 +843,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (data.name) updateData.name = data.name;
     if (data.iconUrl) updateData.icon_url = data.iconUrl;
     if (data.themeColor) updateData.color = data.themeColor;
+    if (data.roles) updateData.roles = data.roles;
+    if (data.memberRoles) updateData.member_roles = data.memberRoles;
     
     const { error } = await supabase.from('projects').update(updateData).eq('id', id);
     if (!error) set(state => ({ projects: state.projects.map(p => p.id === id ? { ...p, ...data } : p) }));
@@ -1133,13 +1156,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       // --- XP REWARDS & STATS ---
-      await get().addXP(userId, 10);
+      await get().addXP(userId, 10, 'send_message');
       await get().incrementStat('chatCount');
 
       // Chat Geral Bonus (+15 XP)
       const currentChannel = get().channels.find(c => c.id === msg.channelId);
       if (currentChannel?.name.toLowerCase() === 'geral') {
-        await get().addXP(userId, 15);
+        await get().addXP(userId, 15, 'geral_bonus');
       }
 
       // Mentions logic
@@ -1151,7 +1174,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           const mentionedUser = get().members.find(m => m.name.toLowerCase() === mentionedName.toLowerCase());
           if (mentionedUser && mentionedUser.id !== userId) {
             await get().sendNotification(mentionedUser.id, 'mention', 'Nova Menção', `@${get().currentUser?.name} mencionou você em um canal.`, `/chat/${msg.channelId}`);
-            await get().addXP(mentionedUser.id, 5);
+            await get().addXP(mentionedUser.id, 5, 'mention_reward');
           }
         }
       }
@@ -1459,7 +1482,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     localStorage.setItem('zs_user_aliases', JSON.stringify(newAliases));
   },
 
-  createRole: (projectId, name, color, permissions) => {
+  createRole: async (projectId, name, color, permissions) => {
+    if (!get().isCreator()) {
+      console.error("Apenas o Criador Supremo pode definir novos Princípios.");
+      return;
+    }
     const projects = get().projects;
     const projectIndex = projects.findIndex(p => p.id === projectId);
     if (projectIndex === -1) return;
@@ -1472,13 +1499,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       position: (projects[projectIndex].roles?.length || 0) + 1
     };
 
-    const newProjects = [...projects];
-    newProjects[projectIndex] = {
-      ...newProjects[projectIndex],
-      roles: [...(newProjects[projectIndex].roles || []), newRole]
-    };
+    const newRoles = [...(projects[projectIndex].roles || []), newRole];
+    const { error } = await supabase.from('projects').update({ roles: newRoles }).eq('id', projectId);
 
-    set({ projects: newProjects });
+    if (!error) {
+      const newProjects = [...projects];
+      newProjects[projectIndex] = {
+        ...newProjects[projectIndex],
+        roles: newRoles
+      };
+      set({ projects: newProjects });
+    }
   },
 
   updateRole: (projectId, roleId, updates) => {
@@ -1494,26 +1525,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ projects: newProjects });
   },
 
-  deleteRole: (projectId, roleId) => {
+  deleteRole: async (projectId, roleId) => {
+    if (!get().isCreator()) {
+      console.error("Apenas o Criador Supremo pode apagar Princípios.");
+      return;
+    }
     const projects = get().projects;
     const projectIndex = projects.findIndex(p => p.id === projectId);
     if (projectIndex === -1) return;
 
     const newProject = { ...projects[projectIndex] };
-    newProject.roles = newProject.roles?.filter(r => r.id !== roleId);
+    const newRoles = newProject.roles?.filter(r => r.id !== roleId) || [];
     
     // Also remove from member assignments
-    if (newProject.memberRoles) {
-      const newMemberRoles = { ...newProject.memberRoles };
-      Object.keys(newMemberRoles).forEach(uid => {
-        newMemberRoles[uid] = newMemberRoles[uid].filter(id => id !== roleId);
-      });
-      newProject.memberRoles = newMemberRoles;
-    }
+    let newMemberRoles = { ...(newProject.memberRoles || {}) };
+    Object.keys(newMemberRoles).forEach(uid => {
+      newMemberRoles[uid] = newMemberRoles[uid].filter(id => id !== roleId);
+    });
 
-    const newProjects = [...projects];
-    newProjects[projectIndex] = newProject;
-    set({ projects: newProjects });
+    const { error } = await supabase.from('projects').update({ 
+      roles: newRoles,
+      member_roles: newMemberRoles
+    }).eq('id', projectId);
+
+    if (!error) {
+      newProject.roles = newRoles;
+      newProject.memberRoles = newMemberRoles;
+      const newProjects = [...projects];
+      newProjects[projectIndex] = newProject;
+      set({ projects: newProjects });
+    }
   },
 
   assignRole: (projectId, userId, roleId) => {
@@ -1636,14 +1677,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadVoiceParticipants: async () => {
-    const { data, error } = await supabase.from('voice_participants').select('*, profiles(username, avatar_str, banner_url, featured_achievements)');
+    const { data, error } = await supabase.from('voice_participants').select('*, profiles(username, avatar_str, banner_url, avatar_url, featured_achievements)');
     if (error) return;
     if (data) {
       const participants: VoiceParticipant[] = data.map(p => ({
         id: p.user_id,
         name: (p.profiles as any)?.username || 'Anon',
         avatarStr: (p.profiles as any)?.avatar_str || '??',
-        avatarPhoto: (p.profiles as any)?.banner_url,
+        avatarPhoto: (p.profiles as any)?.banner_url || (p.profiles as any)?.avatar_url,
         isMuted: p.is_muted,
         isVideoOn: p.is_video_on || false,
         isStreaming: p.is_streaming || false,
@@ -1664,11 +1705,47 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     const channel = supabase.channel('global-voice-sync');
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'voice_participants' }, () => {
-      get().loadVoiceParticipants();
-    }).subscribe((status) => {
-      if (status === 'SUBSCRIBED') set({ _voiceSubscription: channel });
-    });
+    channel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'voice_participants' }, () => {
+        get().loadVoiceParticipants();
+      })
+      .on('broadcast', { event: 'speaking-status' }, ({ payload }) => {
+        const { userId, isSpeaking } = payload;
+        set((state) => {
+          const next = new Set(state.voiceSpeaking);
+          if (isSpeaking) next.add(userId);
+          else next.delete(userId);
+          return { voiceSpeaking: next };
+        });
+      })
+      .on('broadcast', { event: 'mute-status' }, ({ payload }) => {
+        const { userId, userName, isMuted } = payload;
+        get().addVoiceSignal(userId, userName, isMuted ? 'mute' : 'unmute');
+      })
+      .on('broadcast', { event: 'join' }, ({ payload }) => {
+        get().loadVoiceParticipants();
+        get().addVoiceSignal(payload.userId, payload.userName, 'join');
+      })
+      .on('broadcast', { event: 'leave' }, ({ payload }) => {
+        set(state => ({
+          voiceParticipants: state.voiceParticipants.filter(p => p.id !== payload.userId),
+          voiceSpeaking: new Set([...state.voiceSpeaking].filter(id => id !== payload.userId))
+        }));
+        get().addVoiceSignal(payload.userId, payload.userName, 'leave');
+      })
+      .on('broadcast', { event: 'video-status' }, ({ payload }) => {
+        set(state => ({
+          voiceParticipants: state.voiceParticipants.map(p => p.id === payload.userId ? { ...p, isVideoOn: payload.isVideoOn } : p)
+        }));
+      })
+      .on('broadcast', { event: 'streaming-status' }, ({ payload }) => {
+        set(state => ({
+          voiceParticipants: state.voiceParticipants.map(p => p.id === payload.userId ? { ...p, isStreaming: payload.isStreaming } : p)
+        }));
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') set({ _voiceSubscription: channel });
+      });
 
     return () => {
       channel.unsubscribe();
@@ -1703,11 +1780,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       is_streaming: false
     });
 
+    // Broadcast Join
+    const voiceChan = get()._voiceSubscription;
+    if (voiceChan) {
+      voiceChan.send({
+        type: 'broadcast',
+        event: 'join',
+        payload: { userId: currentUser.id, userName: currentUser.name }
+      });
+    }
+
     const activeProject = get().activeProjectId;
     if (activeProject) get().logEvent(activeProject, 'Chamada: Entrada', `Entrou no canal de voz: ${channel?.name || 'Voz'}`);
     
     // XP reward for joining voice (+50 XP)
-    get().addXP(currentUser.id, 50);
+    get().addXP(currentUser.id, 50, 'join_voice');
 
     set({ voiceStartTime: Date.now(), activeVoiceChannelId: channelId });
     get().loadVoiceParticipants();
@@ -1731,6 +1818,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Sync with Supabase
     await supabase.from('voice_participants').delete().eq('user_id', currentUser.id);
 
+    // Broadcast Leave
+    const voiceChan = get()._voiceSubscription;
+    if (voiceChan) {
+      voiceChan.send({
+        type: 'broadcast',
+        event: 'leave',
+        payload: { userId: currentUser.id, userName: currentUser.name }
+      });
+    }
+
     const startTime = get().voiceStartTime;
     const activeProject = get().activeProjectId;
     if (startTime && activeProject) {
@@ -1741,26 +1838,50 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     set(state => ({ 
+      voiceParticipants: state.voiceParticipants.filter(p => p.id !== currentUser.id),
       voiceSpeaking: new Set([...state.voiceSpeaking].filter(id => id !== currentUser.id)), 
       voiceStartTime: null,
       activeVoiceChannelId: null
     }));
-    get().loadVoiceParticipants();
   },
 
   setSpeaking: (userId, isSpeaking) => {
+    // Update local state
     set((state) => {
       const next = new Set(state.voiceSpeaking);
       if (isSpeaking) next.add(userId);
       else next.delete(userId);
       return { voiceSpeaking: next };
     });
+
+    // Broadcast to others if it's the local user
+    if (userId === get().currentUser?.id) {
+      const channel = get()._voiceSubscription;
+      if (channel) {
+        channel.send({
+          type: 'broadcast',
+          event: 'speaking-status',
+          payload: { userId, isSpeaking }
+        });
+      }
+    }
   },
 
   setStreaming: (isStreaming: boolean) => {
     const currentUser = get().currentUser;
     if (!currentUser) return;
+    
     supabase.from('voice_participants').update({ is_streaming: isStreaming }).eq('user_id', currentUser.id).then();
+    
+    const voiceChan = get()._voiceSubscription;
+    if (voiceChan) {
+      voiceChan.send({
+        type: 'broadcast',
+        event: 'streaming-status',
+        payload: { userId: currentUser.id, isStreaming }
+      });
+    }
+
     set(state => ({
       voiceParticipants: state.voiceParticipants.map(p => p.id === currentUser.id ? { ...p, isStreaming } : p)
     }));
@@ -1769,7 +1890,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   setVideoOn: (isVideoOn: boolean) => {
     const currentUser = get().currentUser;
     if (!currentUser) return;
+
     supabase.from('voice_participants').update({ is_video_on: isVideoOn }).eq('user_id', currentUser.id).then();
+
+    const voiceChan = get()._voiceSubscription;
+    if (voiceChan) {
+      voiceChan.send({
+        type: 'broadcast',
+        event: 'video-status',
+        payload: { userId: currentUser.id, isVideoOn }
+      });
+    }
+
     set(state => ({
       voiceParticipants: state.voiceParticipants.map(p => p.id === currentUser.id ? { ...p, isVideoOn } : p)
     }));
@@ -1784,10 +1916,56 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     await supabase.from('voice_participants').update({ is_muted: newMuted, is_speaking: false }).eq('user_id', currentUser.id);
 
+    // Broadcast change
+    const channel = get()._voiceSubscription;
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'mute-status',
+        payload: { userId: currentUser.id, userName: currentUser.name, isMuted: newMuted }
+      });
+    }
+
+    // Add signal locally
+    get().addVoiceSignal(currentUser.id, currentUser.name, newMuted ? 'mute' : 'unmute');
+
     set(state => ({
       voiceParticipants: state.voiceParticipants.map(p => p.id === currentUser.id ? { ...p, isMuted: newMuted } : p),
       voiceSpeaking: newMuted ? new Set([...state.voiceSpeaking].filter(id => id !== currentUser.id)) : state.voiceSpeaking
     }));
+  },
+
+  addVoiceSignal: (userId, userName, action) => {
+    const id = Math.random().toString(36).substring(7);
+    const signal = { id, userId, userName, action, timestamp: Date.now() };
+    
+    // Play sound effects
+    const playSubtle = (url: string) => {
+      const audio = new Audio(url);
+      audio.volume = 0.2; // Very subtle
+      audio.play().catch(() => {});
+    };
+
+    if (action === 'mute') {
+      playSubtle('https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3');
+    } else if (action === 'unmute') {
+      playSubtle('https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3');
+    } else if (action === 'join') {
+      playSubtle('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    } else if (action === 'leave') {
+      playSubtle('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+    }
+
+    set(state => ({ 
+      voiceSignals: [...state.voiceSignals, signal]
+    }));
+
+    // Auto-remove signal after 4 seconds
+    setTimeout(() => {
+      set(state => ({
+        voiceSignals: state.voiceSignals.filter(s => s.id !== id)
+      }));
+    }, 4000);
   },
 
   loadNotes: async (projectId) => {
@@ -1924,7 +2102,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!error) {
       await get().incrementStat('inboxCount');
       // XP reward for recipient (+20 XP)
-      await get().addXP(toId, 20);
+      await get().addXP(toId, 20, 'receive_email');
     }
     return { error };
   },
@@ -2228,7 +2406,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   isCreator: () => {
     const user = get().currentUser;
-    return user?.email === CREATOR_EMAIL;
+    return user?.email?.toLowerCase() === CREATOR_EMAIL.toLowerCase();
   },
 
   canManageSincronicidade: (projectId) => {
@@ -2241,19 +2419,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     return project.ownerId === userId || get().hasPermission(projectId, userId, 'MANAGE_EVENTS');
   },
 
-  addXP: async (userId, amount) => {
+  addXP: async (userId, amount, actionKey) => {
     if (userId === BOT_GUST_ID || userId === BOT_ZERO_ID) return;
     
     try {
-      // 1. Fetch current XP from DB (safest way to ensure consistency)
+      // 1. Fetch current XP and Stats from DB
       const { data: profile, error: fetchError } = await supabase
         .from('profiles')
-        .select('xp')
+        .select('xp, stats')
         .eq('id', userId)
         .single();
       
       if (fetchError) throw fetchError;
       
+      const stats = profile?.stats || {};
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Daily Limit Logic
+      if (actionKey) {
+        if (!stats.daily_xp || stats.daily_xp.date !== today) {
+          stats.daily_xp = { date: today, counts: {} };
+        }
+        
+        const count = stats.daily_xp.counts[actionKey] || 0;
+        if (count >= 3) {
+          console.log(`[XP System] Limite diário de 3 atingido para: ${actionKey}`);
+          return;
+        }
+        stats.daily_xp.counts[actionKey] = count + 1;
+      }
+
       const currentXP = profile?.xp || 0;
       const newXP = currentXP + amount;
       
@@ -2265,24 +2460,27 @@ export const useAppStore = create<AppState>((set, get) => ({
         .from('profiles')
         .update({ 
           xp: newXP,
-          level: finalLevel
+          level: finalLevel,
+          stats: stats
         })
         .eq('id', userId);
         
       if (updateError) throw updateError;
       
       // 3. Update local state
-      if (get().currentUser?.id === userId) {
-        set(state => ({
-          currentUser: state.currentUser ? { 
-            ...state.currentUser, 
+      const user = get().currentUser;
+      if (user?.id === userId) {
+        set({
+          currentUser: { 
+            ...user, 
             xp: newXP,
-            level: finalLevel
-          } : null
-        }));
+            level: finalLevel,
+            stats: stats
+          }
+        });
       }
 
-      // Update member list so UI reflects everywhere
+      // Update member list
       set(state => ({
         members: state.members.map(m => m.id === userId ? {
           ...m,

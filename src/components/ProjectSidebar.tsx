@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './ProjectSidebar.css';
-import { Target } from 'lucide-react';
+
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store';
 import CreateServerModal from './CreateServerModal';
@@ -59,7 +59,7 @@ const ProjectSidebar = () => {
       <div className="project-separator" />
       {/* Home/Fixed shortcut — NOW CREATES PROJECTS */}
       <div className={`project-item ${!activeProjectId ? 'active' : ''}`} onClick={handleCreateProject} title="Criar Fragmento do Todo">
-        <Target size={24} />
+        <img src="/favicon.png" alt="Z0" style={{ width: 24, height: 24, objectFit: 'contain' }} />
       </div>
 
       {showCreateModal && (

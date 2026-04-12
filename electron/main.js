@@ -159,9 +159,17 @@ app.whenReady().then(() => {
   // Check for updates every time we open/start
   autoUpdater.checkForUpdatesAndNotify();
 
+  // Check every 10 minutes
+  setInterval(() => {
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 10 * 60 * 1000);
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
     else mainWindow.show();
+    
+    // Also check when waking up the app
+    autoUpdater.checkForUpdatesAndNotify();
   });
 });
 

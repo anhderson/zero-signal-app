@@ -134,10 +134,10 @@ const ParticipantActionPanel: React.FC<ParticipantActionPanelProps> = ({
 
           <div className="action-section">
             <div className="section-header">
-              <label>CARGOS</label>
+              <label>PRINCÍPIOS</label>
               {activeProjectId && currentUser && hasPermission(activeProjectId, currentUser.id, 'MANAGE_ROLES') && (
                 <button className="manage-roles-btn" onClick={() => setShowRoleAssigner(!showRoleAssigner)}>
-                  <Shield size={12} /> Gerenciar
+                  <Shield size={12} /> Atribuir Princípio
                 </button>
               )}
             </div>
@@ -150,7 +150,7 @@ const ParticipantActionPanel: React.FC<ParticipantActionPanelProps> = ({
                   </span>
                 ))
               ) : (
-                <span className="no-roles">Nenhum cargo atribuído</span>
+                <span className="no-roles">Nenhum princípio manifestado</span>
               )}
             </div>
 

@@ -172,7 +172,18 @@ const MembersSidebar = () => {
                           )}
                         </div>
                         <span className="member-role">
-                          {isSpeaking ? 'Transmitindo voz...' : (member.status || 'Online')}
+                          {isSpeaking ? (
+                            <span style={{ color: 'var(--neon-lime)' }}>Transmitindo voz...</span>
+                          ) : (
+                            (() => {
+                              const roleIds = activeProject?.memberRoles?.[member.id] || [];
+                              const roles = activeProject?.roles?.filter(r => roleIds.includes(r.id)) || [];
+                              const highestRole = roles.sort((a, b) => (a.position || 0) - (b.position || 0))[0];
+                              return highestRole ? (
+                                <span style={{ color: highestRole.color }}>{highestRole.name}</span>
+                              ) : (member.status || 'Disponível');
+                            })()
+                          )}
                         </span>
                       </div>
                     </div>
@@ -210,7 +221,16 @@ const MembersSidebar = () => {
                     </div>
                     <div className="member-info">
                       <span className="member-name">{member.name}</span>
-                      <span className="member-role">Offline</span>
+                      <span className="member-role">
+                        {(() => {
+                           const roleIds = activeProject?.memberRoles?.[member.id] || [];
+                           const roles = activeProject?.roles?.filter(r => roleIds.includes(r.id)) || [];
+                           const highestRole = roles.sort((a, b) => (a.position || 0) - (b.position || 0))[0];
+                           return highestRole ? (
+                             <span style={{ color: highestRole.color, opacity: 0.5 }}>{highestRole.name}</span>
+                           ) : 'Offline';
+                        })()}
+                      </span>
                     </div>
                   </div>
                 ))}

@@ -1,7 +1,7 @@
 {
   "name": "zerosignal",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.10",
   "description": "Zero Signal - Communication and Project Management Platform",
   "author": "Anhderson",
   "main": "electron/main.js",
@@ -66,7 +66,8 @@
       "electron/**/*"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "electron/icon.png"
     }
   }
 }

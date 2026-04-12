@@ -13,6 +13,7 @@ import IntegrityProtocolModal from './components/IntegrityProtocolModal'
 import { GustWelcomeModal } from './components/GustWelcomeModal'
 import AchievementModal from './components/AchievementModal'
 import UpdateModule from './components/UpdateModule'
+import ChangelogModal from './components/ChangelogModal'
 import './App.css'
 
 // Auth Guard Component
@@ -144,6 +145,7 @@ function App() {
       <GustWelcomeModal />
       <AchievementModal />
       <UpdateModule />
+      <ChangelogModal />
       
       {/* GUST LOCKDOWN OVERLAY */}
       {isSecurityCritical && (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../store';
-import { Target, Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import './LoginView.css';
 
 const LoginView = () => {
@@ -88,7 +88,7 @@ const LoginView = () => {
   return (
     <div className="login-container">
       <div className="login-box glass-panel flicker">
-        <Target size={64} className="login-logo" />
+        <img src="/favicon.png" alt="Zero Signal Logo" className="login-logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
         <h2 className="neon-text">{isRegister ? 'SISTEMA DE CADASTRO' : 'BEM-VINDO DE VOLTA'}</h2>
         <p>ACESSE A REDE SEGURA DO ZERO SIGNAL.</p>
         

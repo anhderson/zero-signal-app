@@ -1,4 +1,4 @@
-import { Volume2, Video, VideoOff, Mic, MicOff, MonitorUp, PhoneOff, PhoneCall, Gamepad2, Monitor, Layout, X, Activity, Music } from 'lucide-react';
+import { Volume2, Video, VideoOff, Mic, MicOff, MonitorUp, PhoneOff, PhoneCall, Gamepad2, Monitor, Layout, X, Activity, Music, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import TopBar from '../components/TopBar';
 import ActivitiesOverlay from '../components/games/ActivitiesOverlay';
 import { useAppStore } from '../store';
@@ -30,7 +30,8 @@ const VideoView = () => {
     activeVoiceChannelId,
     userVolumes,
     setStreaming,
-    setVideoOn
+    setVideoOn,
+    voiceSignals
   } = useAppStore();
 
   const [selectedParticipant, setSelectedParticipant] = useState<any | null>(null);
@@ -120,7 +121,7 @@ const VideoView = () => {
         setIsVideoOff(false);
         setVideoOn(true);
         incrementStat('videoCount');
-        if (currentUser) addXP(currentUser.id, 100);
+        if (currentUser) addXP(currentUser.id, 100, 'camera_on');
         if (activeProjectId) logEvent(activeProjectId, 'Vídeo: Ligado', 'Câmera foi ativada pelo usuário.');
 
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -241,6 +242,27 @@ const VideoView = () => {
         title={activeChannel?.name ?? 'Lounge'}
         icon={<Volume2 size={20} className="topbar-icon" />}
       />
+
+      <div className="voice-signals-container">
+        {voiceSignals.map(signal => (
+          <div key={signal.id} className={`voice-signal-toast ${signal.action}`}>
+            <div className="signal-icon">
+              {signal.action === 'mute' ? <MicOff size={14} /> : 
+               signal.action === 'unmute' ? <Mic size={14} /> :
+               signal.action === 'join' ? <PhoneIncoming size={14} /> :
+               <PhoneOutgoing size={14} />}
+            </div>
+            <span>
+              <strong>{userAliases[signal.userId] || signal.userName}</strong> {
+                signal.action === 'mute' ? 'silenciou' : 
+                signal.action === 'unmute' ? 'ativou o microfone' :
+                signal.action === 'join' ? 'entrou na chamada' :
+                'saiu da chamada'
+              }
+            </span>
+          </div>
+        ))}
+      </div>
 
       <div className="video-content">
         {totalTiles === 0 && (
