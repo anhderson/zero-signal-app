@@ -312,8 +312,7 @@
   white-space: nowrap;
 }
 
-/* ---- Select for input device ---- */
-.camera-selector {
+.camera-selector, .mic-selector {
   background: rgba(0, 0, 0, 0.4);
   color: var(--text-muted);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -326,11 +325,14 @@
   outline: none;
   cursor: pointer;
   margin-top: 4px;
+  transition: all 0.2s;
 }
 
-.camera-selector:hover, .camera-selector:focus {
-  border-color: rgba(var(--accent-rgb), 0.3);
+.camera-selector:hover, .mic-selector:hover, 
+.camera-selector:focus, .mic-selector:focus {
+  border-color: var(--neon-cyan);
   color: var(--text-normal);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .control-btn {

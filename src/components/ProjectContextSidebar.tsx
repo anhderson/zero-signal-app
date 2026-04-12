@@ -247,13 +247,21 @@ const ProjectContextSidebar = () => {
   const [pendingChannel, setPendingChannel] = React.useState<{ id: string, type: string } | null>(null);
 
   const handleChannelClick = (id: string, type: string) => {
+    const isVoice = type === 'voice' || type === 'video';
+
     // If user is in a call and clicks a DIFFERENT voice channel, ask for confirmation
-    if (activeVoiceChannelId && (type === 'voice' || type === 'video') && id !== activeVoiceChannelId) {
+    if (activeVoiceChannelId && isVoice && id !== activeVoiceChannelId) {
       setPendingChannel({ id, type });
       return;
     }
     
     setActiveChannel(id);
+    
+    // Auto-join if clicking a voice channel and NOT currently in any call
+    if (isVoice && !activeVoiceChannelId) {
+      joinVoice(id);
+    }
+
     navigate(channelRoute(type));
   };
 

@@ -38,9 +38,9 @@ const VideoView = () => {
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
 
-  const { remoteStreams } = useWebRTC(activeVoiceChannelId, screenStream || webcamStream);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [selectedMicrophoneId, setSelectedMicrophoneId] = useState<string>('');
   const [showActivities, setShowActivities] = useState(false);
   const [showSourcePicker, setShowSourcePicker] = useState(false);
   const [availableSources, setAvailableSources] = useState<any[]>([]);
@@ -58,10 +58,17 @@ const VideoView = () => {
         if (vids.length > 0 && !selectedCameraId) {
           setSelectedCameraId(vids[0].deviceId);
         }
+        
+        const auds = devices.filter(d => d.kind === 'audioinput');
+        if (auds.length > 0 && !selectedMicrophoneId) {
+          setSelectedMicrophoneId(auds[0].deviceId);
+        }
       } catch (err) {}
     };
     getDevices();
-  }, [selectedCameraId]);
+  }, [selectedCameraId, selectedMicrophoneId]);
+
+  const { remoteStreams, microphones } = useWebRTC(activeVoiceChannelId, screenStream || webcamStream, selectedMicrophoneId);
 
   useEffect(() => {
     if (localVideoRef.current && webcamStream) {
@@ -218,9 +225,10 @@ const VideoView = () => {
     }
   };
 
-  const streamingParticipants = voiceParticipants.filter(p => !p.isLocal && p.isStreaming);
+  const streamingParticipantsInChannel = voiceParticipants.filter(p => !p.isLocal && p.isStreaming && p.channelId === activeChannelId);
+  const participantsInChannel = voiceParticipants.filter(p => p.channelId === activeChannelId);
 
-  const totalTiles = voiceParticipants.length + (screenStream ? 1 : 0) + streamingParticipants.length;
+  const totalTiles = participantsInChannel.length + (screenStream ? 1 : 0) + streamingParticipantsInChannel.length;
   const gridClass  = totalTiles === 0 ? '' : totalTiles === 1 ? 'grid-1' : totalTiles === 2 ? 'grid-2' : totalTiles <= 4 ? 'grid-4' : 'grid-many';
 
   const handleJoin = () => {
@@ -261,7 +269,7 @@ const VideoView = () => {
             )}
 
             {/* Remote Screen Shares */}
-            {streamingParticipants.map(participant => (
+            {streamingParticipantsInChannel.map(participant => (
               <div key={`stream-${participant.id}`} className="video-tile screen-share-tile remote-stream" style={{ padding: 0, backgroundColor: '#000' }}>
                 <RemoteVideo stream={remoteStreams[participant.id]} />
                 <div className="video-overlay">
@@ -271,7 +279,7 @@ const VideoView = () => {
               </div>
             ))}
 
-            {voiceParticipants.map(user => {
+            {participantsInChannel.map(user => {
               const isSpeaking = voiceSpeaking.has(user.id);
               const avatarColor = user.isLocal ? 'var(--neon-cyan)' : 'var(--neon-magenta)';
 
@@ -379,13 +387,28 @@ const VideoView = () => {
               <span className="control-label">Jogos</span>
             </div>
 
-            <div
-              className={`control-btn ${isMuted ? 'muted' : ''}`}
-              onClick={toggleMuteSelf}
-              title={isMuted ? 'Ativar microfone' : 'Silenciar'}
-            >
-              {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-              <span className="control-label">Mic</span>
+            <div className="control-group-flex" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div
+                className={`control-btn ${isMuted ? 'muted' : ''}`}
+                onClick={toggleMuteSelf}
+                title={isMuted ? 'Ativar microfone' : 'Silenciar'}
+              >
+                {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                <span className="control-label">Mic</span>
+              </div>
+              <select 
+                 className="camera-selector mic-selector" 
+                 value={selectedMicrophoneId}
+                 onChange={(e) => setSelectedMicrophoneId(e.target.value)}
+                 title="Escolher Dispositivo de Áudio"
+              >
+                {microphones.length === 0 && <option value="">Sem microfones</option>}
+                {microphones.map((mic, i) => (
+                  <option key={mic.deviceId} value={mic.deviceId}>
+                    {mic.label || `Microfone ${i + 1}`}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="control-btn" onClick={() => setProfileSettings(true, 'profile')} title="Escolher Status">

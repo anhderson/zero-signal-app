@@ -3,16 +3,31 @@ import { useAppStore } from '../store';
 import { supabase } from '../lib/supabase';
 
 
-export const useWebRTC = (channelId: string | null, additionalStream: MediaStream | null = null) => {
+export const useWebRTC = (channelId: string | null, additionalStream: MediaStream | null = null, microphoneId: string | null = null) => {
   const { currentUser, voiceParticipants, setSpeaking, pushToTalk, isPTTPressed } = useAppStore();
   
   const me = voiceParticipants.find(p => p.id === currentUser?.id);
   const isMuted = me?.isMuted || false;
 
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
+  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const localStreamRef = useRef<MediaStream | null>(null);
   const peersRef = useRef<Record<string, { pc: RTCPeerConnection; senders: Record<string, RTCRtpSender> }>>({});
   const signalingRef = useRef<any>(null);
+
+  // 0. Get Devices
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === 'audioinput');
+        setMicrophones(mics);
+      } catch (err) {}
+    };
+    getDevices();
+    navigator.mediaDevices.addEventListener('devicechange', getDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+  }, []);
 
   // 1. Get Local Stream (Audio)
   useEffect(() => {
@@ -20,8 +35,18 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
 
     const startLocalStream = async () => {
       try {
+        // Stop previous tracks if changing microphone
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(t => t.stop());
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
+            audio: microphoneId ? { 
+                deviceId: { exact: microphoneId },
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } : {
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true
@@ -54,10 +79,12 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
         };
         checkSpeaking();
 
-        // Add audio track to all existing peers
+        // Update tracks for all existing peers
         Object.values(peersRef.current).forEach(({ pc, senders }) => {
           stream.getAudioTracks().forEach(track => {
-            if (!senders['audio']) {
+            if (senders['audio']) {
+              senders['audio'].replaceTrack(track);
+            } else {
               senders['audio'] = pc.addTrack(track, stream);
             }
           });
@@ -76,7 +103,7 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
         localStreamRef.current = null;
       }
     };
-  }, [channelId, currentUser, setSpeaking]);
+  }, [channelId, currentUser, setSpeaking, microphoneId]);
 
   // 1.1 Handle Additional Stream (Video/Screen)
   useEffect(() => {
@@ -271,5 +298,5 @@ export const useWebRTC = (channelId: string | null, additionalStream: MediaStrea
     }
   };
 
-  return { remoteStreams };
+  return { remoteStreams, microphones };
 };
